@@ -13,7 +13,7 @@ We recommend to use [conda](https://conda.io/docs/user-guide/install/download.ht
 - [python3](https://www.python.org/)    
 - [tensorflow](https://www.tensorflow.org) 
 
-By using the [`requirements.txt`](https://github.com/YuChuanxiu/DeepCPR/blob/main/requirements/pip/requirements.txt) file, it will install all the required packages.
+By using the [`requirements.txt`](https://github.com/YuChuanxiu/DeepCPR/blob/main/requirements/requirements.txt) file, it will install all the required packages.
 
     git clone https://github.com/YuChuanxiu/DeepCPR.git
     cd DeepCPR
