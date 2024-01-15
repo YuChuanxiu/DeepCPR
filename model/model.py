@@ -82,6 +82,16 @@ def UpBlock(input_tensor, filters, kernel_size, stride1, l2rate, keep_prop):
     x = dropblock(x, keep_prop, 3)
     return x
 
+def ConvBlock2(input_tensor, filters1, kernel_size, stride1, l2rate, keep_prop):
+    x = layers.Conv2D(filters = filters1, kernel_size = kernel_size, strides = stride1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
+    x = layers.BatchNormalization()(x)
+    x = layers.ReLU()(x)
+    x = layers.Conv2D(filters = filters1, kernel_size = kernel_size, strides = stride1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.ReLU()(x)
+    x = dropblock(x, keep_prop, 3)
+    return x
+
 def finalBlock(input_tensor, filters1, filters2, l2rate):
     x = layers.Conv2D(filters = filters1, kernel_size = (1,1), strides = 1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
     x = layers.BatchNormalization()(x)
