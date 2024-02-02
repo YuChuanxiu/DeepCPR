@@ -4,10 +4,6 @@ import scipy.io.netcdf as nc
 from numpy import  hstack
 import numpy as np
 import sys
-from matplotlib.ticker import FormatStrFormatter
-from matplotlib.pyplot import figure, show, plot, xlabel,ylabel,subplot,legend,title
-from pylab import vlines
-import matplotlib.pyplot as plt
 
 class netcdf_reader:
     def __init__(self, fname, bmmap=True):
@@ -106,25 +102,6 @@ class netcdf_reader:
         return{'d': mo, 'rt': rt, 'mz': mz}
 
 
-def plot_ms(ms):
-    fig = figure()
-    ax = fig.add_subplot(111)
-    ax.vlines(ms['mz'], np.zeros((len(ms['mz']),)), ms['val'], color='b', linestyles='solid')
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%3.4f'))
-    show()
-
-
-def plot_tic(tic_dict):
-    figure()
-    plot(tic_dict['rt'], tic_dict['val'])
-    xlabel('Rentention time')
-    ylabel('Intensity') 
-    title('TIC')
-    legend()
-    show()
-
-
-
 if __name__ == '__main__':
 
     
@@ -135,34 +112,3 @@ if __name__ == '__main__':
     ncr = netcdf_reader(filename, bmmap=False)
     m = ncr.mat(1000,2000,0.1)
     RT = m['rt']
-    Xtest = m['d'] 
-    plt.figure()
-    plt.plot(Xtest) 
-
-
-    RT_sta = np.searchsorted(RT,11.4)
-    RT_end = np.searchsorted(RT,11.8)
-    plt.figure()
-    plot(Xtest[RT_sta:RT_end,:])
-    
-    
-    tic = ncr.tic()  
-    plot_tic(tic)
-
-    ll=ncr.mz_rt(10.77)
-    plot_ms(ll)
-    #print(np.mean(abs(ll['val'])))
-    
-
-
-     
-    
-    #np.save('MP_test.npy',Test)
-    #np.save('MP_test_rt.npy',RT)
-    
-    
-    
-    
-    
-
-
