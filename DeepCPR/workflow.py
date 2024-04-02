@@ -16,11 +16,10 @@ import pandas as pd
 
 if __name__ == "__main__":
 
-    dataset_path = "C:/Users/ZNDX001/Documents/9-17色谱分辨工作/data/LMJ"
-    save_path = 'C:/DeepEER2/LMJdata_workflow'
+    dataset_path = "C:/Users/ZNDX001/Documents/Python_Scripts/truedatas/male infertility plasma GC-MS data/X99"
+    save_path = 'C:/Users/ZNDX001/Documents/Python_Scripts/truedatas/male infertility plasma GC-MS data/X99'
     DeepCS_path = 'C:/Users/ZNDX001/Documents/Python_Scripts/DeepResolution2-main/DeepResolution2/model/UNet4S/model.h5'
     DeepCPR_path = 'C:/DeepEER2/model_out/23_04_18/SepConv/24/model.h5'
-    # fastei_model_path = ''
 
     generate_image = input("Do you want to generate the images of resolution? Warning: images generation will spend more time. (yes/no): ")
     if generate_image.lower() in ['yes', 'y']:
