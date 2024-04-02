@@ -34,50 +34,53 @@ from tqdm import tqdm
 #import PIL.Image
 
 
-def check_file(path):
-    if not os.path.exists(path):
-        print("File not exist")
-        return False
-    if (os.path.isdir(path)):
-        if not os.access(path, os.R_OK):
-            print("File is accessible to read")
-            return False
-        print(os.path.basename(path))
+# def check_file(path):
+#     if not os.path.exists(path):
+#         print("File not exist")
+#         return False
+#     if (os.path.isdir(path)):
+#         if not os.access(path, os.R_OK):
+#             print("File is accessible to read")
+#             return False
+#         print(os.path.basename(path))
+#
+#         for file in os.listdir(path):
+#             file = os.path.join(path, file)
+#             check_file(file)
+#     else:
+#         if not os.access(path, os.R_OK):
+#             print("File is accessible to read")
+#             return False
+#         with open(path) as f:
+#             print(f.name)
+#
+#
+# def list_allfile(path, all_files=[]):
+#     if os.path.exists(path):
+#         files = os.listdir(path)
+#     else:
+#         print('this path not exist')
+#     for file in files:
+#         if os.path.isdir(os.path.join(path, file)):
+#             list_allfile(os.path.join(path, file), all_files)
+#         else:
+#             all_files.append(os.path.join(path, file))
+#     return all_files
 
-        for file in os.listdir(path):
-            file = os.path.join(path, file)
-            check_file(file)
-    else:
-        if not os.access(path, os.R_OK):
-            print("File is accessible to read")
-            return False
-        with open(path) as f:
-            print(f.name)
 
-
-def list_allfile(path, all_files=[]):
-    if os.path.exists(path):
-        files = os.listdir(path)
-    else:
-        print('this path not exist')
-    for file in files:
-        if os.path.isdir(os.path.join(path, file)):
-            list_allfile(os.path.join(path, file), all_files)
-        else:
-            all_files.append(os.path.join(path, file))
-    return all_files
-
-
-def process(X):
-    for i in range(X.shape[0]):
-        if np.max(X[i, :]) != 0:
-            X[i, :] = 10000*X[i, :]/np.max(X[i, :])
-        else:
-            print(i, 'k')
-    return X
+# def process(X):
+#     for i in range(X.shape[0]):
+#         if np.max(X[i, :]) != 0:
+#             X[i, :] = 10000*X[i, :]/np.max(X[i, :])
+#         else:
+#             print(i, 'k')
+#     return X
 
 
 def data_restore(num, dis_st, predict, ind_st_DeepSeg, ind_en_DeepSeg, mz_min, mz_max, chrom_divid):
+    """
+    Extraction of GC-MS data segment and their predictive chromatography
+    """
     chrom_origin = chrom_divid[num]
     C_0 = np.zeros((ind_en_DeepSeg[num]-ind_st_DeepSeg[num], 5), dtype=float32)
     C_0[:, :] = predict[num][int(dis_st):int(dis_st+ind_en_DeepSeg[num]-ind_st_DeepSeg[num]), :]
@@ -85,29 +88,10 @@ def data_restore(num, dis_st, predict, ind_st_DeepSeg, ind_en_DeepSeg, mz_min, m
     return chrom_origin, C_0
 
 
-def cal_deriv(x, y):
-    diff_x = []
-    for i, j in zip(x[0::], x[1::]):
-        diff_x.append(j - i)
-
-    diff_y = []
-    for i, j in zip(y[0::], y[1::]):
-        diff_y.append(j - i)
-
-    slopes = []
-    for i in range(len(diff_y)):
-        slopes.append(diff_y[i] / diff_x[i])
-
-    deriv = []
-    for i, j in zip(slopes[0::], slopes[1::]):
-        deriv.append((0.5 * (i + j)))
-    deriv.insert(0, slopes[0])
-    deriv.append(slopes[-1])
-    return deriv
-
-
-# @jit(nopython=True)
 def peak_find(CC):
+    """
+    Analyze the locations of peaks in chromatograms.
+    """
     C = np.copy(CC)
 
     threshold = 3e-3
@@ -139,8 +123,10 @@ def peak_find(CC):
     return peak_st, peak_ed
 
 
-# @jit(nopython=True)
 def com_find(CC):
+    """
+    obtaining the number of components in chromatograms.
+    """
     C = np.copy(CC)
 
     threshold = 3e-3
@@ -173,8 +159,10 @@ def com_find(CC):
     return COM
 
 
-# @jit(nopython=True)
 def peak_preprocess(CC):
+    """
+    Pre-processing of predicted chromatographic profiles.
+    """
     # low intensity noise filtering
     C = np.copy(CC)
 
@@ -322,8 +310,31 @@ def peak_preprocess(CC):
     return C
 
 
-# @jit(nopython=True)
+def cal_deriv(x, y):
+    diff_x = []
+    for i, j in zip(x[0::], x[1::]):
+        diff_x.append(j - i)
+
+    diff_y = []
+    for i, j in zip(y[0::], y[1::]):
+        diff_y.append(j - i)
+
+    slopes = []
+    for i in range(len(diff_y)):
+        slopes.append(diff_y[i] / diff_x[i])
+
+    deriv = []
+    for i, j in zip(slopes[0::], slopes[1::]):
+        deriv.append((0.5 * (i + j)))
+    deriv.insert(0, slopes[0])
+    deriv.append(slopes[-1])
+    return deriv
+
+
 def tail_fix(CC):
+    """
+    Refining the shapes of predicted chromatographic profiles to Gaussian-like.
+    """
     C = np.copy(CC)
     COM = com_find(C)
     peak_st, peak_ed = peak_find(C)
@@ -334,6 +345,8 @@ def tail_fix(CC):
         x_max = np.argmax(deriv)
         x_min = np.argmin(deriv)
 
+        peaks, _ = find_peaks(C[:, r], height=0.003)  # 找出波峰
+        inten_max = peaks[np.argmax([C[i, r] for i in peaks])]
         leftfit = 'no'
         rightfit = 'no'
         for z in range(x_max, 0, -1):
@@ -346,16 +359,80 @@ def tail_fix(CC):
                 rightfit = 'yes'
                 rp = y + min(xrange)
                 break
-        if leftfit == 'yes':
-            C[0:lp, r] = 0
-        if rightfit == 'yes':
-            C[rp:C.shape[0], r] = 0
+
+        if leftfit == 'yes' and rightfit == 'yes':
+            peak_x = np.arange(lp + 1, rp)
+            peak_x = [float(i) for i in peak_x]
+            peak_y = C[lp + 1:rp, r]
+            peak_y = [float(i) for i in peak_y]
+            if len(peak_x) > 2 and np.abs(inten_max - lp) > 2 and np.abs(inten_max - rp) > 2:
+                if C[lp, r] < 0.5 * np.max(C[:, r]):
+                    s = 2 * np.abs(getnearpos(C[lp:inten_max, r], 0.5 * np.max(C[:, r])) - inten_max)
+                elif C[rp, r] < 0.5 * np.max(C[:, r]):
+                    s = 2 * np.abs(getnearpos(C[inten_max:rp, r], 0.5 * np.max(C[:, r])) - inten_max)
+                else:
+                    if np.argmin([C[lp, r], C[rp, r]]) == 0:
+                        s = np.max(C[:, r]) * np.abs(inten_max - lp) / (np.max(C[:, r]) - C[lp, r])
+                    if np.argmin([C[lp, r], C[rp, r]]) == 1:
+                        s = np.max(C[:, r]) * np.abs(rp - inten_max) / (np.max(C[:, r]) - C[rp, r])
+
+                popt, pcov = curve_fit(gaussian, peak_x, peak_y, p0=[np.max(C[:, r]), inten_max, s], maxfev=500000)
+                for j in range(rp, C.shape[0], 1):
+                    C[j, r] = gaussian(j, *popt)
+                    if gaussian(j, *popt) < 0.003:
+                        C[j:C.shape[0], r] = 0
+                        break
+                for j in range(lp, -1, -1):
+                    C[j, r] = gaussian(j, *popt)
+                    if gaussian(j, *popt) < 0.003:
+                        C[0:j, r] = 0
+                        break
+
+        if leftfit == 'no' and rightfit == 'yes':
+            peak_x = np.arange(peak_st[0], rp)
+            peak_x = [float(i) for i in peak_x]
+            peak_y = C[peak_st[0]:rp, r]
+            peak_y = [float(i) for i in peak_y]
+            if len(peak_x) > 2 and np.abs(inten_max - rp) > 2:
+                if inten_max == peak_st[0] and peak_st[0] > 0:
+                    s = 2 * np.abs(getnearpos(C[peak_st[0] - 1:inten_max, r], 0.5 * np.max(C[:, r])) - inten_max)
+                elif inten_max == peak_st[0] and peak_st[0] == 0:
+                    s = 2 * np.abs(getnearpos(C[peak_st[0]:inten_max + 1, r], 0.5 * np.max(C[:, r])) - inten_max)
+                else:
+                    s = 2 * np.abs(getnearpos(C[peak_st[0]:inten_max, r], 0.5 * np.max(C[:, r])) - inten_max)
+                popt, pcov = curve_fit(gaussian, peak_x, peak_y, p0=[np.max(C[:, r]), inten_max, s], maxfev=500000)
+                for j in range(rp, C.shape[0], 1):
+                    C[j, r] = gaussian(j, *popt)
+                    if gaussian(j, *popt) < 0.003:
+                        C[j:C.shape[0], r] = 0
+                        break
+
+        if leftfit == 'yes' and rightfit == 'no':
+            peak_x = np.arange(lp + 1, peak_ed[0])
+            peak_x = [float(i) for i in peak_x]
+            peak_y = C[lp + 1:peak_ed[0], r]
+            peak_y = [float(i) for i in peak_y]
+            if len(peak_x) > 2 and np.abs(inten_max - lp) > 2:
+                if inten_max == peak_st[0] and peak_ed[0] < C.shape[0]:
+                    s = 2 * np.abs(getnearpos(C[inten_max:peak_ed[0] + 1, r], 0.5 * np.max(C[:, r])) - inten_max)
+                elif inten_max == peak_st[0] and peak_ed[0] == C.shape[0]:
+                    s = 2 * np.abs(getnearpos(C[inten_max - 1:peak_ed[0], r], 0.5 * np.max(C[:, r])) - inten_max)
+                else:
+                    s = 2 * np.abs(getnearpos(C[inten_max:peak_ed[0], r], 0.5 * np.max(C[:, r])) - inten_max)
+                popt, pcov = curve_fit(gaussian, peak_x, peak_y, p0=[np.max(C[:, r]), inten_max, s], maxfev=500000)
+                for j in range(lp, -1, -1):
+                    C[j, r] = gaussian(j, *popt)
+                    if gaussian(j, *popt) < 0.003:
+                        C[0:j, r] = 0
+                        break
+
     return C
 
 
-# @jit(nopython=True)
 def peak_halfremove(CC):
-    # 1 remove half peak and add mark
+    """
+    1 remove half peak and add mark.
+    """
     C = np.copy(CC)
     threshold = 3e-3
     halfdo = 'None'
@@ -402,9 +479,10 @@ def peak_halfremove(CC):
     return C, halfdo
 
 
-# @jit(nopython=True)
 def dishalfremove(CC, C_ed, threshold=3e-3):
-    # 2 remove half peak and add mark
+    """
+    2. remove half peak and add mark.
+    """
     C = np.copy(CC)
     # threshold = 3e-3
     dishalfdo = 'None'
@@ -443,9 +521,10 @@ def dishalfremove(CC, C_ed, threshold=3e-3):
     return C, dishalfdo, dishalfnum
 
 
-# @jit(nopython=True)
 def testt(CC):
-    # refine chromatogram by detecting and removing coincide peaks
+    """
+    refine chromatogram by detecting and removing coincide peaks
+    """
     C = np.copy(CC)
     testdo = 'None'
     lapdo = 'None'
@@ -504,7 +583,9 @@ def testt(CC):
 
 
 def peak_filter(C, C_ed, St, COM):
-    # filer components with spectra or chromatogram is none
+    """
+    Remove components with spectra or chromatogram is none.
+    """
     for i in range(COM):
         if np.all(St[i, :] == 0) is True or np.all(C_ed[:, i] == 0) is True:
             C[:, i] = 0
@@ -512,7 +593,9 @@ def peak_filter(C, C_ed, St, COM):
 
 
 def peak_trans(C, C_trans):
-    # rearrange peak in chromatographic list
+    """
+    rearrange peak in chromatographic list.
+    """
     signone = []
     for m in range(C.shape[1]):
         if np.all(C[:, m] == 0) == False:
@@ -527,9 +610,11 @@ def peak_trans(C, C_trans):
 
     return C_trans
 
-# @jit(nopython=True)
+
 def peak_dislap(CC, C_ed):
-    # remove overlapping chromatograms after iteration
+    """
+    Remove excessive overlapping chromatograms after iteration.
+    """
     C = np.copy(CC)
     dislapdo = 'None'
     dislapnum = []
@@ -670,8 +755,10 @@ def fnnls(x, y, tole):
     return {'xx': xx, 'w': w}
 
 
-# @jit(nopython=True)
 def ITTFA_PRO(X, C_0, COM):
+    """
+    Using ITTFA and initial chromatographic estimation to resolve mass spectra and refine chromatograms.
+    """
     u, s, v = tl.truncated_svd(X, COM)
     T = np.dot(u, np.diag(s))
 
@@ -781,7 +868,6 @@ def ITTFA_PRO(X, C_0, COM):
     return C_ed, St
 
 
-# @jit(nopython=True)
 def ITTFA(X, C_0, COM):
     u, s, v = tl.truncated_svd(X, COM)
     T = np.dot(u, np.diag(s))
@@ -837,6 +923,9 @@ def judge_min(n):
 
 
 def data_process(work_path, filename, dist, thres):
+    """
+    Read the CDF file and segment the data according to the peaks.
+    """
     ncr = netcdf_reader(filename, bmmap=False)
     sie = hstack((ncr.f.variables['scan_index'].data, np.array([len(ncr.f.variables['intensity_values'].data)], dtype=int)))
     mat = ncr.mat(1, len(sie)-2, 1)
@@ -848,15 +937,24 @@ def data_process(work_path, filename, dist, thres):
 
 
 def gaussian(x,*param):
+    """
+    Gaussian formula.
+    """
     return param[0]*np.exp(-np.power(x - param[1], 2.) / (2 * np.power(param[2], 2.)))
 
 
 def getnearpos(array,value):
+    """
+    Obtain the nearest location to  the given values in a array.
+    """
     idx = (np.abs(array-value)).argmin()
     return idx
 
 
 def R_squared(y_true, y_pred):
+    """
+    Custom metrics of DeepCPR model.
+    """
     residual = tf.reduce_sum(tf.square(tf.subtract(y_true, y_pred)))
     total = tf.reduce_sum(tf.square(tf.subtract(y_true, tf.reduce_mean(y_true))))
     r2 = tf.subtract(1.0, tf.math.divide(residual, total))
@@ -864,6 +962,9 @@ def R_squared(y_true, y_pred):
 
 
 def FR(x, s, o, z, com):
+    """
+    Subfunction of Full rank resolution.
+    """
     xs = x[s, :]
     xs[xs < 0] = 0
     xz = x[z, :]
@@ -896,6 +997,9 @@ def FR(x, s, o, z, com):
 
 
 def contrain_FR(c, s, o):
+    """
+    Subfunction of Full rank resolution.
+    """
     ind_s = np.argmax(np.abs(c[s]))
     if c[s][ind_s] < 0:
         c = -c
@@ -934,6 +1038,10 @@ def contrain_FR(c, s, o):
 
 
 def full_rank_resolution(x, CC, peak_st, peak_ed, COM):
+    """
+    Full rank resolution for GC-MS resolution.
+    The initial estimations are the start and end locations for every compounds.
+    """
     C = np.copy(CC)
 
     if COM == 2:
@@ -1132,8 +1240,10 @@ def full_rank_resolution(x, CC, peak_st, peak_ed, COM):
     return re_x, re_chrom, R2, S
 
 
-# @jit(nopython=True)
 def dynamic_FRR(x, CC, peak_st, peak_ed, COM):
+    """
+    fully full rank resolution according to the retention time information from the predicted chromatographic profiles.
+    """
     C = np.copy(CC)
     ar = [i for i in range(-2, 3)]
 
@@ -1311,8 +1421,10 @@ def dynamic_FRR(x, CC, peak_st, peak_ed, COM):
     return re_x, re_chrom, R2, S
 
 
-# @jit(float64(float32[:], float64[:]))
 def WhittakerSmooth(x, w, lambda_, differences=1):
+    """
+    Subfunction of airPLS.
+    """
     X = np.matrix(x)
     m = X.size
     E = eye(m, format='csc')
@@ -1325,8 +1437,10 @@ def WhittakerSmooth(x, w, lambda_, differences=1):
     return np.array(background)
 
 
-# @jit(nopython=False)
 def airPLS(x, lambda_=500, porder=1, itermax=15):
+    """
+    Function for baseline removing.
+    """
     m = x.shape[0]
     w = np.ones(m)
     for i in range(1, itermax+1):
@@ -1343,6 +1457,9 @@ def airPLS(x, lambda_=500, porder=1, itermax=15):
 
 
 def PW_loss(y_true, y_pred):
+    """
+    Custom loss of DeepCPR model.
+    """
     weight_high = tf.cast(50, dtype=float32)
     weight_low = tf.cast(10, dtype=float32)
     threshold = tf.cast(0.001, dtype=float32)
@@ -1359,10 +1476,16 @@ def PW_loss(y_true, y_pred):
 
 
 def MAE(x1, x2):
+    """
+    Function for calculation of Mean Average Error.
+    """
     return np.sum(np.abs([x1[i]-x2[i] for i in range(len(x1))])) / len(x1)
 
 
 def save_as_msp(filename, RT, mz_values, intensity_values):
+    """
+    Save resolved spectra as msp format files.
+    """
     with open(filename, 'w') as file:
         file.write("Name: Unknown Compound\n")
         file.write(f"RT: {str(RT)}\n")
@@ -1370,17 +1493,24 @@ def save_as_msp(filename, RT, mz_values, intensity_values):
         for mz, intensity in zip(mz_values, intensity_values):
             file.write(f"{mz} {intensity}\n")
 
+
 def DeepPCR(work_path, modelpath, filename, figure_savepath, dist, thres, generate_image):
+    """
+    Main function of DeepCPR resolution.
+    work_path: the path of GC-MS data segment model, which should lead to the model itself, like (.h5).
+    modelpath: the path of chromatographic profile prediction model, which should lead to the model itself, like (.h5).
+    filename: path of data waiting for resolution.
+    figure_savepath: path to store pictures.
+    dist, thres: some parameters for data segment model. (default 3, 15)
+    generate_image: whether generate picture or not.
+    """
     # start_time = time.time()
     mat, RT, Xtest, ind_st_DeepSeg, ind_en_DeepSeg = data_process(work_path, filename, dist, thres)
 
     TICsum_origin = [np.sum(Xtest[i, :]) for i in range(Xtest.shape[0])]
-    if max(mat['mz']) == 800:
-        mz_min = math.floor(judge_min(min(mat['mz'])))
-        mz_max = math.ceil(max(mat['mz']))
-    else:
-        mz_min = math.floor(min(mat['mz']))
-        mz_max = math.ceil(judge_max(max(mat['mz'])))
+
+    mz_min = math.floor(judge_min(min(mat['mz'])))
+    mz_max = math.ceil(max(mat['mz']))
 
     # data segment, baseline correction, chromatographic profile prediction
     x_seg_pre = np.zeros((len(ind_st_DeepSeg), 128, 800), dtype=np.float32)
@@ -1426,7 +1556,6 @@ def DeepPCR(work_path, modelpath, filename, figure_savepath, dist, thres, genera
     tol_com = [0]
     for i in tqdm(range(len(ind_st_DeepSeg)), desc="resolving processing"):
         num = i
-        # print('i=', i)
         wayname = 'non_frr'
         dis_st = math.ceil((128-(int(ind_en_DeepSeg[i])-int(ind_st_DeepSeg[i])))/2)
 
@@ -1530,6 +1659,7 @@ def DeepPCR(work_path, modelpath, filename, figure_savepath, dist, thres, genera
                     chrom_resol_pre = np.dot(C_pre, St_pre)
                     R2_pre = 1 - np.var(chrom_resol_pre - chrom_seg, ddof=1)/np.var(chrom_seg, ddof=1)
 
+                    # ITTFA
                     COM_C_in = com_find(C_in_0)
                     if COM_C_in == 0:
                         reserve = np.argmax([np.max(C_in[:, h]) for h in range(COM)])
@@ -1692,133 +1822,36 @@ def DeepPCR(work_path, modelpath, filename, figure_savepath, dist, thres, genera
 
             if lapdo == 'None':
                 if dislapdo == 'Done' or dishalfdo == 'Done':
-                    if np.max(chrom_seg) < 10000:
-                        # ITTFA
-                        if len(dislapnum) != 0:
-                            for k in dislapnum:
-                                C_in_0[:, k] = 0
-                        if len(dishalfnum) != 0:
-                            for k in dishalfnum:
-                                C_in_0[:, k] = 0
+                    # ITTFA
+                    if len(dislapnum) != 0:
+                        for k in dislapnum:
+                            C_in_0[:, k] = 0
+                    if len(dishalfnum) != 0:
+                        for k in dishalfnum:
+                            C_in_0[:, k] = 0
 
-                        COM_C_in = com_find(C_in_0)
-                        if COM_C_in == 0:
-                            reserve = np.argmax([np.max(C_in[:, h]) for h in range(COM)])
-                            C_in_it = np.zeros_like(C)
-                            C_in_it[:, reserve] = C_in[:, reserve]
-                            C_in_0 = C_in_it
+                    COM_C_in = com_find(C_in_0)
+                    if COM_C_in == 0:
+                        reserve = np.argmax([np.max(C_in[:, h]) for h in range(COM)])
+                        C_in_it = np.zeros_like(C)
+                        C_in_it[:, reserve] = C_in[:, reserve]
+                        C_in_0 = C_in_it
 
-                        COM = com_find(C_in_0)
-                        C_in_aa = np.zeros_like(C)
-                        C_in_it = peak_trans(C_in_0, C_in_aa)
-                        C_ed_it, St_it = ITTFA_PRO(chrom_seg, C_in_it, COM)
+                    COM = com_find(C_in_0)
+                    C_in_aa = np.zeros_like(C)
+                    C_in_it = peak_trans(C_in_0, C_in_aa)
+                    C_ed_it, St_it = ITTFA_PRO(chrom_seg, C_in_it, COM)
 
-                        chrom_resol_it = np.dot(C_ed_it, St_it)
+                    chrom_resol_it = np.dot(C_ed_it, St_it)
 
-                        R2_it = 1 - np.var(chrom_resol_it - chrom_seg, ddof=1)/np.var(chrom_seg, ddof=1)
+                    R2_it = 1 - np.var(chrom_resol_it - chrom_seg, ddof=1)/np.var(chrom_seg, ddof=1)
 
-                        chrom_resol = chrom_resol_it
-                        C_ed = C_ed_it
-                        R2 = R2_it
-                        St = St_it
-                        C_p = C_in_it
+                    chrom_resol = chrom_resol_it
+                    C_ed = C_ed_it
+                    R2 = R2_it
+                    St = St_it
+                    C_p = C_in_it
 
-                    else:
-                        C_pre = np.copy(C_pre_0)
-                        St_pre = np.zeros((5, chrom_seg.shape[1]))
-                        for j in range(0, St_pre.shape[1]):
-                            a = fnnls(np.dot(C_pre.T, C_pre), np.dot(C_pre.T, chrom_seg[:, j]), tole='None')
-                            St_pre[:, j] = a['xx']
-
-                        chrom_resol_pre = np.dot(C_pre, St_pre)
-                        R2_pre = 1 - np.var(chrom_resol_pre - chrom_seg, ddof=1)/np.var(chrom_seg, ddof=1)
-
-                        # ITTFA
-                        if len(dislapnum) != 0:
-                            for k in dislapnum:
-                                C_in_0[:, k] = 0
-                        if len(dishalfnum) != 0:
-                            for k in dishalfnum:
-                                C_in_0[:, k] = 0
-
-                        COM_C_in = com_find(C_in_0)
-                        if COM_C_in == 0:
-                            reserve = np.argmax([np.max(C_in[:, h]) for h in range(COM)])
-                            C_in_it = np.zeros_like(C)
-                            C_in_it[:, reserve] = C_in[:, reserve]
-                            C_in_0 = C_in_it
-
-                        COM = com_find(C_in_0)
-                        C_in_aa = np.zeros_like(C)
-                        C_in_it = peak_trans(C_in_0, C_in_aa)
-                        C_ed_it, St_it = ITTFA_PRO(chrom_seg, C_in_it, COM)
-
-                        chrom_resol_it = np.dot(C_ed_it, St_it)
-
-                        R2_it = 1 - np.var(chrom_resol_it - chrom_seg, ddof=1)/np.var(chrom_seg, ddof=1)
-
-                        # full rank resolution
-                        COM = com_find(C_pre)
-                        peak_st, peak_ed = peak_find(C_pre)
-                        if COM > 1:
-                            if R2_it <= 0.99 and COM < 4:
-                                chrom_resol_frr, C_ed_frr, R2_frr, St_frr = dynamic_FRR(chrom_seg, C_pre, peak_st, peak_ed, COM)
-                                if R2_frr > R2_it:
-                                    chrom_resol = chrom_resol_frr
-                                    C_ed = C_ed_frr
-                                    R2 = R2_frr
-                                    St = St_frr
-                                    C_p = C_pre
-                                    wayname = 'frr'
-                                else:
-                                    chrom_resol = chrom_resol_it
-                                    C_ed = C_ed_it
-                                    R2 = R2_it
-                                    St = St_it
-                                    C_p = C_in_it
-
-                            elif COM > 3 and R2_it < 0.7 and R2_pre < 0.9:
-                                chrom_resol_frr, C_ed_frr, R2_frr, St_frr = dynamic_FRR(chrom_seg, C_pre, peak_st, peak_ed, COM)
-                                if R2_frr > R2_it:
-                                    chrom_resol = chrom_resol_frr
-                                    C_ed = C_ed_frr
-                                    R2 = R2_frr
-                                    St = St_frr
-                                    C_p = C_pre
-                                    wayname = 'frr'
-                                else:
-                                    chrom_resol = chrom_resol_it
-                                    C_ed = C_ed_it
-                                    R2 = R2_it
-                                    St = St_it
-                                    C_p = C_in_it
-                            else:
-                                chrom_resol = chrom_resol_it
-                                C_ed = C_ed_it
-                                R2 = R2_it
-                                St = St_it
-                                C_p = C_in_it
-
-                            if R2_pre > R2:
-                                chrom_resol = chrom_resol_pre
-                                C_ed = C_pre
-                                R2 = R2_pre
-                                St = St_pre
-                                C_p = C_pre
-                                wayname = 'non_frr'
-
-                        if COM == 1:
-                            chrom_resol = chrom_resol_it
-                            C_ed = C_ed_it
-                            R2 = R2_it
-                            St = St_it
-                            C_p = C_in_it
-                            if R2_pre > R2_it:
-                                chrom_resol = chrom_resol_pre
-                                C_ed = C_pre
-                                R2 = R2_pre
-                                St = St_pre
-                                C_p = C_pre
 
             # TIC = [sum(chrom_seg[i, :]) for i in range(chrom_seg.shape[0])]
             # TIC_resol = [sum(chrom_resol[i, :]) for i in range(chrom_resol.shape[0])]
@@ -1924,6 +1957,9 @@ def DeepPCR(work_path, modelpath, filename, figure_savepath, dist, thres, genera
 
 
 def data_resolution(dataset_path, DeepCS_path, DeepCPR_path, save_path, generate_image):
+     """
+     Function that stores the resolution result of DeepCPR.
+     """
     # start = time.time()
     px_savepath1 = save_path + '/single'
     px_savepath2 = save_path + '/seg'
@@ -2021,8 +2057,8 @@ if __name__ == '__main__':
         print('file processing:', file)
         print('data loading......')
 
-        peak_excel_single, peak_excel_seg, ms_single = DeepPCR(work_path, modelpath, filename, dist=3, thres=15, generate_image=False)
-        print(peak_excel_single)
+        peak_excel_single, peak_excel_seg, ms_single = DeepPCR(work_path, modelpath, filename, dist=3, thres=50, generate_image=False)
+
 # =============================================================================
 #         pe_single = pd.DataFrame(peak_excel_single)
 #         pe_single.to_excel(px_savepath1 + '/' + file_pre + '.xlsx', index=False)
