@@ -1362,13 +1362,13 @@ def MAE(x1, x2):
     return np.sum(np.abs([x1[i]-x2[i] for i in range(len(x1))])) / len(x1)
 
 
-def save_as_msp(filename, mz_values, intensity_values):
+def save_as_msp(filename, RT, mz_values, intensity_values):
     with open(filename, 'w') as file:
         file.write("Name: Unknown Compound\n")
-        # file.write(f"Num Peaks: {len(mz_values)}\n")
+        file.write(f"RT: {str(RT)}\n")
+        file.write(f"Num Peaks: {len(mz_values)}\n")
         for mz, intensity in zip(mz_values, intensity_values):
             file.write(f"{mz} {intensity}\n")
-
 
 def DeepPCR(work_path, modelpath, filename, figure_savepath, dist, thres, generate_image):
     # start_time = time.time()
@@ -1968,12 +1968,13 @@ def data_resolution(dataset_path, DeepCS_path, DeepCPR_path, save_path, generate
             os.makedirs(ms_savepath + '/' + file_pre)
         for i in range(len(ms_single)):
             ms_single_com = ms_single[i]['ms']
+            RT = peak_excel_single[i]['rt']
             # ms_temp = np.zeros((ms_single_com.shape[0], 2))
             mz_values = np.arange(1, ms_single_com.shape[0]+1)
             intensity_values = ms_single_com
             # ms = pd.DataFrame(ms_temp)
             # ms.to_csv(ms_savepath + '/' + file_pre + '/' + str(i) + '.csv', index=False, header=False)
-            save_as_msp(ms_savepath + '/' + file_pre + '/' + str(i) + '.msp', mz_values, intensity_values)
+            save_as_msp(ms_savepath + '/' + file_pre + '/' + str(i) + '.msp', RT, mz_values, intensity_values)
 
         del peak_excel_single, peak_excel_seg, ms_single, pe_single, pe_seg
         gc.collect()
@@ -2021,7 +2022,7 @@ if __name__ == '__main__':
         print('data loading......')
 
         peak_excel_single, peak_excel_seg, ms_single = DeepPCR(work_path, modelpath, filename, dist=3, thres=15, generate_image=False)
-
+        print(peak_excel_single)
 # =============================================================================
 #         pe_single = pd.DataFrame(peak_excel_single)
 #         pe_single.to_excel(px_savepath1 + '/' + file_pre + '.xlsx', index=False)
