@@ -16,10 +16,10 @@ import pandas as pd
 
 if __name__ == "__main__":
 
-    dataset_path = "C:/Users/ZNDX001/Documents/Python_Scripts/truedatas/male infertility plasma GC-MS data/X99"
-    save_path = 'C:/Users/ZNDX001/Documents/Python_Scripts/truedatas/male infertility plasma GC-MS data/X99'
-    DeepCS_path = 'C:/Users/ZNDX001/Documents/Python_Scripts/DeepResolution2-main/DeepResolution2/model/UNet4S/model.h5'
-    DeepCPR_path = 'C:/DeepEER2/model_out/23_04_18/SepConv/24/model.h5'
+    dataset_path = ""
+    save_path = ''
+    DeepCS_path = 'example/DeepCS.h5'
+    DeepCPR_path = 'example/DeepCPR.h5'
 
     generate_image = input("Do you want to generate the images of resolution? Warning: images generation will spend more time. (yes/no): ")
     if generate_image.lower() in ['yes', 'y']:
@@ -35,7 +35,6 @@ if __name__ == "__main__":
     # create peaktable
     peaktable(save_path + '/single', save_path)
     print("All data has been resolved")
-
 
     OPLS_operation = input("Do you want to execute OPLS-DA? (Category label is required) (yes/no): ")
     if OPLS_operation.lower() in ['yes', 'y']:
@@ -53,15 +52,14 @@ if __name__ == "__main__":
     else:
         print("Invalid response. Please answer 'yes' or 'no'.")
 
-
     # OPLS-DA
     if OPLS_op is True:
         opls_savepath = save_path + "/OPLSDA"
         if not os.path.exists(opls_savepath):
             os.makedirs(opls_savepath)
 
-        # peak_table_data = pd.read_csv(save_path + '/peak_area_table.csv', index_col='rt')
-        peak_table_data = pd.read_csv('C:/Users/ZNDX001/Desktop/text/DeepCPR_20231228/Table S12.csv', index_col=0)
+        peak_table_data = pd.read_csv(save_path + '/peak_area_table.csv', index_col='rt')
+        #peak_table_data = pd.read_csv('C:/Users/ZNDX001/Desktop/text/DeepCPR_20231228/Table S12.csv', index_col=0)
         
         COMs = peak_table_data.columns.values.astype('float')
         
@@ -83,21 +81,20 @@ if __name__ == "__main__":
         heatmap(origin_data, VIP, VIP_df, COM, opls_savepath)
         permutation_test(opls_savepath, target)
 
-
         # compounds identification
         file_names = os.listdir(save_path + '/single')
-        # 用于存储匹配结果的字典
+        # Storing Matching Results
         matches = {rt: None for rt in COM}
         for rt in COM:
             for file_name in file_names:
                 df = pd.read_csv(save_path + '/single/' + file_name)
         
-                # 检查 rt 列中是否存在目标 rt 值
+                # Check for the presence of the target rt value in the rt column
                 rt_index = df[df['rt'] == rt].index
                 if not rt_index.empty:
-                    # 找到匹配，记录文件名和索引
+                    # Record matching filenames and indexes
                     matches[rt] = (file_name, rt_index[0])
-                    break  # 停止当前 rt 值的搜索，继续下一个 rt 值
+                    break
 
         with open(opls_savepath + '/vip_components_MS_location.txt', 'w') as file:
             for rt, match in matches.items():
