@@ -100,15 +100,3 @@ class netcdf_reader:
                     ind2 = ind
                 mo[j-imin, np.array(ind2, dtype=np.int32)] = sp2
         return{'d': mo, 'rt': rt, 'mz': mz}
-
-
-if __name__ == '__main__':
-
-    
-    #filename = 'D:/my/DeepResolution/CDF/zhi10-5vs1.CDF'
-   # filename = 'D:/GCMS/LHM/Deconvolution software validation/cdf/normal1/2C_1.cdf'
-    #filename = 'D:/GCMS/tbb/metabolomics/080603cdf/正常/244-2.CDF'
-    filename = 'D:/GCMS/highGCMS/丁香花蕾/A/20120620_4UGDINGXIANGHUALEI01.CDF'#10556
-    ncr = netcdf_reader(filename, bmmap=False)
-    m = ncr.mat(1000,2000,0.1)
-    RT = m['rt']
