@@ -1604,12 +1604,6 @@ def DeepCPR(work_path, modelpath, filename, figure_savepath, dist, thres, genera
             C_in_0 = np.copy(C_in)
             C_pre_0 = np.copy(C_in)
 
-            # if i == 13:
-            #     plt.figure()
-            #     plt.plot(C_in_0)
-            #     plt.title('C_in_0')
-            #     plt.show()
-
             COM = com_find(C_in)
             if COM > 1:
                 C_ed_it, St_it = ITTFA_PRO(chrom_seg, C_in, COM)
@@ -1620,12 +1614,6 @@ def DeepCPR(work_path, modelpath, filename, figure_savepath, dist, thres, genera
             else:
                 dislapdo = 'None'
                 dishalfdo = 'None'
-
-            # if i == 13:
-            #     plt.figure()
-            #     plt.plot(C_out)
-            #     plt.title('C_out')
-            #     plt.show()
 
             if lapdo == 'Done':
                 if dislapdo == 'Done' or dishalfdo == 'Done':
