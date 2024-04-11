@@ -731,34 +731,3 @@ def permutation_test(savepath, target, data, summaryDF):
     plt.tight_layout()
     plt.savefig(savepath + "/frequency.tif", dpi=300)
     # plt.show()
-
-
-if __name__ == "__main__":
-    matplotlib.use('Qt5Agg')
-
-    # data = pd.read_excel('C:/DeepEER2/maledata/23_04_18-24-505/total_peakexcel.xlsx', index_col=0)
-    peak_table_data = pd.read_csv('C:/Users/ZNDX001/Desktop/text/Table S12_RT.csv', index_col=0)
-
-    COMs = peak_table_data.columns.values
-
-    data = peak_table_data.values
-    data = data.astype(float)
-    origin_data = np.copy(data)
-
-    catnumber = 61  # The first 61 samples belong to the same group for this dataset
-    target = np.zeros((data.shape[0], 1))
-    target[0:catnumber, 0] = 1
-    target[catnumber:, 0] = -1
-
-    modelDF, summaryDF, VIP_df, xcvTraMN, toVn, tVn = OPLS(data, target, 10)
-    opls_savepath = 'C:/Users/ZNDX001/Desktop/text/Table S12_RT_save'
-    scatter_cluster(peak_table_data, target, toVn, tVn, opls_savepath)
-    VIP, COMS = vip_objection(data, VIP_df, COMs, opls_savepath)
-    heatmap(origin_data, VIP, VIP_df, COMS, opls_savepath)
-    permutation_test(opls_savepath, target, data, summaryDF)
-
-
-
-
-
-
