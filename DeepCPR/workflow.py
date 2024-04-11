@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 17 09:52:20 2024
-
-@author: ZNDX001
-"""
 
 from DeepCPR import data_resolution
 from csv_merge import peaktable
@@ -59,7 +54,6 @@ if __name__ == "__main__":
             os.makedirs(opls_savepath)
 
         peak_table_data = pd.read_csv(save_path + '/peak_area_table.csv', index_col='rt')
-        #peak_table_data = pd.read_csv('C:/Users/ZNDX001/Desktop/text/DeepCPR_20231228/Table S12.csv', index_col=0)
         
         COMs = peak_table_data.columns.values.astype('float')
         
