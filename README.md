@@ -20,7 +20,7 @@ By using the [`requirements.txt`](https://github.com/YuChuanxiu/DeepCPR/blob/mai
     pip install -r requirements.txt
 
 # Example
-The DeepCPR resolution process and results are shown in [`example.ipynb`](https://github.com/YuChuanxiu/DeepCPR/blob/main/example.ipynb). First, the lowest concentration data from the fatty acid dataset is utilized to demonstrate the automatic resolution process. Models of DeepCPR and DeepCPR and datasets of fatty acid and amino acid are upload in release v1.1. In this example, models are downloaded and put into "example" folder. To show the OPLS-DA process, the peak table data is extracted from a human plasma dataset, which is resolved by DeepCPR.
+The DeepCPR resolution process and results are shown in [`example.ipynb`](https://github.com/YuChuanxiu/DeepCPR/blob/main/example.ipynb). First, the lowest concentration data from the fatty acid dataset is utilized to demonstrate the automatic resolution process. Models of DeepCPR and DeepCPR and datasets of fatty acid and amino acid are upload in release v1.0. In this example, models are downloaded and put into "example" folder. To show the OPLS-DA process, the peak table data is extracted from a human plasma dataset, which is resolved by DeepCPR.
 
 # Information of maintainers
 - 222301019@csu.edu.cn
