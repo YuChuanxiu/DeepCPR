@@ -1,0 +1,7 @@
+# Pretrained model files
+example/DeepCS.h5
+example/DeepCPR.h5
+
+# Python cache
+__pycache__/
+*.py[cod]
