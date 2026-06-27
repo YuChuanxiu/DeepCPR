@@ -2,7 +2,7 @@
 Deep learning-based Chromatographic Profile Resolution 
 
 ------
-DeepCPR is an easy-use tool to resolve untargeted GC-MS data automatically based on chromatographic prediction. The users simply enter the data path to be analyzed, and DeepCPR will divide the raw GC-MS data into segments and predict the chromatographic profiles for each segment. Then, the corresponding mass spectra are obtained by iterative MCR methods. After all the segments are resolved, the peak table of the GC-MS data will be generated. The constructed OPLS-DA model performs discriminant analysis on the peak table and screens potential biomarkers of GC-MS data. workflow.py provides the whole seamless processes from raw dataset into peak table, resolved mass spectra, and potential biomarkers. Compounds identification is realized by [`FastEI`](https://github.com/Qiong-Yang/FastEI/tree/main). FastEI is utilized as an alternative search tool for compounds that cannot be identified by matching the NIST library. Since the input of FastEI is in csv format, the resolved mass soectra by DeepCPR are in msp format, a conversion method is provided in msp_to_csv.py. 
+DeepCPR is an easy-use tool to resolve complex GC-MS data automatically based on chromatographic prediction. The users simply enter the data path to be analyzed, and DeepCPR will divide the raw GC-MS data into segments and predict the chromatographic profiles for each segment. Then, the corresponding mass spectra are obtained by iterative MCR methods. After all the segments are resolved, the peak table of the GC-MS data will be generated. The constructed OPLS-DA model performs discriminant analysis on the peak table and screens potential biomarkers of GC-MS data. workflow.py provides the whole seamless processes from raw dataset into peak table, resolved mass spectra, and potential biomarkers. Compounds identification can be realized by [`FastEI`](https://github.com/Qiong-Yang/FastEI/tree/main). FastEI is utilized as an alternative search tool for compounds that cannot be identified by matching the NIST library. Since the input of FastEI is in csv format, the resolved mass soectra by DeepCPR are in msp format, a conversion method is provided in msp_to_csv.py. 
 
 <div align="center">
 <img src="https://github.com/YuChuanxiu/DeepCPR/blob/main/workflow.png" width=785 height=913 />
@@ -20,7 +20,29 @@ By using the [`requirements.txt`](https://github.com/YuChuanxiu/DeepCPR/blob/mai
     pip install -r requirements.txt
 
 # Example
-The DeepCPR resolution process and results are shown in [`example.ipynb`](https://github.com/YuChuanxiu/DeepCPR/blob/main/example.ipynb). First, the lowest concentration data from the fatty acid dataset is utilized to demonstrate the automatic resolution process. Models of DeepCPR and DeepCPR and datasets of fatty acid and amino acid are upload in release v1.0. In this example, models are downloaded and put into "example" folder. To show the OPLS-DA process, the peak table data is extracted from a human plasma dataset, which is resolved by DeepCPR.
+The DeepCPR resolution workflow and representative results are demonstrated in [`example.ipynb`](https://github.com/YuChuanxiu/DeepCPR/blob/main/example.ipynb).
+
+Download the pretrained models and example datasets from [Release v1.1.0](https://github.com/YuChuanxiu/DeepCPR/releases/tag/v1.1.0):
+
+- `DeepCPR.h5`
+- `DeepCS.h5`
+- `data.zip`
+
+Place `DeepCPR.h5` and `DeepCS.h5` in the `example` folder. Extract `data.zip` into the same folder so that the datasets are located at:
+
+```text
+example/data/
+
+The resulting directory structure should be:
+
+DeepCPR/
+├── example/
+│   ├── data/
+│   ├── DeepCPR.h5
+│   └── DeepCS.h5
+└── example.ipynb
+
+In the first example, the lowest-concentration samples from the fatty acid dataset are used to demonstrate the automatic chromatographic resolution workflow. The OPLS-DA workflow is demonstrated using a peak table extracted from a human plasma dataset resolved by DeepCPR.
 
 # Information of maintainers
 - 222301019@csu.edu.cn
