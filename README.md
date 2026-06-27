@@ -8,7 +8,7 @@ DeepCPR is an easy-use tool to resolve complex GC-MS data automatically based on
 <img src="https://github.com/YuChuanxiu/DeepCPR/blob/main/workflow.png" width=785 height=913 />
 </div>
 
-# Package required: 
+# Package required
 We recommend to use [conda](https://conda.io/docs/user-guide/install/download.html) and [pip](https://pypi.org/project/pip/).
 - [python3](https://www.python.org/)    
 - [tensorflow](https://www.tensorflow.org) 
@@ -41,6 +41,7 @@ DeepCPR/
 │   ├── DeepCPR.h5
 │   └── DeepCS.h5
 └── example.ipynb
+```
 
 In the first example, the lowest-concentration samples from the fatty acid dataset are used to demonstrate the automatic chromatographic resolution workflow. The OPLS-DA workflow is demonstrated using a peak table extracted from a human plasma dataset resolved by DeepCPR.
 
