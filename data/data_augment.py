@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 18 10:00:56 2023
-
-@author: ZNDX001
-"""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,8 +12,6 @@ import scipy.special as sse
 from scipy import signal
 import matplotlib
 
-
-# matplotlib.use('Qt5Agg')
 
 def add_baseline(chrom, scans):
     baseline =  np.zeros(chrom.shape)
@@ -357,7 +350,7 @@ def mkdir(path):
 
 if __name__ == '__main__':
    
-    savefile = 'C:/DeepEER2/data/augdata/'
+    savefile = '../augdata/'
     trainsave = savefile + 'train/'
     figuresave = savefile + 'train_figure/'
     validationsave = savefile + 'validation/'
@@ -368,10 +361,9 @@ if __name__ == '__main__':
     mkdir(validationsave)
     mkdir(testsave)
     
-    datafile = u'C:/Users/ZNDX001/Documents/Python_Scripts/deepEER/mass_re.npy' 
+    datafile = u'../example/data/augment_spectrum/mass_re.npy' 
     spectrum = np.load(datafile)
     spectrum = process(spectrum)
-    
     
 ###training datas###
     num1 = 80000
@@ -379,29 +371,6 @@ if __name__ == '__main__':
     n_c = 5
     point = 128    
     xa = np.arange(0, point, 1)    
-    
-    fn = 1
-    savename = 'C:/DeepEER2/data/val_test1/0418/' + str(fn)
-    mkdir(savename)
-    
-    loc0 = 30
-    data,label,S = gauss5(loc0,spectrum,point,xa,[0.2,0.31],[3,5])
-
-    GCMSdata=np.zeros((batch_num, point, spectrum.shape[1]))
-    labeldata=np.zeros((batch_num, point, n_c))
-         
-    plt.figure()
-    plt.subplot(211)
-    plt.plot(data)
-    plt.subplot(212)
-    plt.plot(label.T)
-    plt.savefig(savename +'/' + 'test.png')
-    
-    GCMSdata[0,:,:] = data
-    labeldata[0,:,:] = label.T
-    
-    np.save(savename +'/' + 'data'+str(0)+'.npy',GCMSdata)
-    np.save(savename +'/' + 'label'+str(0)+'.npy',labeldata)
 
     matplotlib.use('Agg')
     for n in range(0,num1):           
