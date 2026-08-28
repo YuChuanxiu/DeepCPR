@@ -1,68 +1,109 @@
 # DeepCPR
-Deep learning-based Chromatographic Profile Resolution 
 
-------
-DeepCPR is an easy-use tool to resolve complex GC-MS data automatically based on chromatographic prediction. The users simply enter the data path to be analyzed, and DeepCPR will divide the raw GC-MS data into segments and predict the chromatographic profiles for each segment. Then, the corresponding mass spectra are obtained by iterative MCR methods. After all the segments are resolved, the peak table of the GC-MS data will be generated. The constructed OPLS-DA model performs discriminant analysis on the peak table and screens potential biomarkers of GC-MS data. workflow.py provides the whole seamless processes from raw dataset into peak table, resolved mass spectra, and potential biomarkers. Compounds identification can be realized by [`FastEI`](https://github.com/Qiong-Yang/FastEI/tree/main). FastEI is utilized as an alternative search tool for compounds that cannot be identified by matching the NIST library. Since the input of FastEI is in csv format, the resolved mass soectra by DeepCPR are in msp format, a conversion method is provided in msp_to_csv.py. 
+Deep learning-based Chromatographic Profile Resolution
+
+## Overview
+
+DeepCPR is a tool for automatic resolution of complex GC-MS data based on
+chromatographic profile prediction. It divides raw GC-MS data into segments,
+predicts chromatographic profiles, and estimates the corresponding mass
+spectra using iterative multivariate curve resolution (MCR) methods. The
+workflow produces resolved peak tables and mass spectra for downstream
+compound identification and statistical analysis.
+
+The repository also includes an OPLS-DA workflow for discriminant analysis and
+biomarker screening. Resolved spectra can be searched against the NIST library
+or converted for use with [FastEI](https://github.com/Qiong-Yang/FastEI/tree/main).
 
 <div align="center">
-<img src="https://github.com/YuChuanxiu/DeepCPR/blob/main/workflow.png" width=785 height=913 />
+<img src="https://github.com/YuChuanxiu/DeepCPR/blob/main/workflow.png" width="785" alt="DeepCPR workflow" />
 </div>
 
-# Package required
-We recommend to use [conda](https://conda.io/docs/user-guide/install/download.html) and [pip](https://pypi.org/project/pip/).
-- [python3](https://www.python.org/)    
-- [tensorflow](https://www.tensorflow.org) 
+## Key features
 
-By using the [`requirements.txt`](https://github.com/YuChuanxiu/DeepCPR/blob/main/requirements.txt) file, it will install all the required packages.
+- Automatic resolution of complex GC-MS chromatographic profiles.
+- Export of peak tables, segment information, and NIST-compatible MSP files.
+- Optional generation of chromatographic resolution figures.
+- Adaptive resolution for segments containing more than five co-eluting
+  components.
+- TensorFlow/H5 and TensorFlow-independent ONNX Runtime inference paths.
+- A Gradio-based local browser interface for users who prefer a graphical
+  workflow.
 
-    git clone https://github.com/YuChuanxiu/DeepCPR.git
-    cd DeepCPR
-    pip install -r requirements.txt
+## Installation
 
-# Example
-The DeepCPR resolution workflow and representative results are demonstrated in [`example.ipynb`](https://github.com/YuChuanxiu/DeepCPR/blob/main/example.ipynb).
+We recommend using [Conda](https://conda.io/docs/user-guide/install/download.html)
+and [pip](https://pypi.org/project/pip/). Python 3.10 is supported.
 
-Download the pretrained models and example datasets from [Release v1.1.0](https://github.com/YuChuanxiu/DeepCPR/releases/tag/v1.1.0):
+Clone the repository and enter its root directory:
 
-- `DeepCPR.h5`
-- `DeepCS.h5`
-- `data.zip`
+```bash
+git clone https://github.com/YuChuanxiu/DeepCPR.git
+cd DeepCPR
+```
 
-Place `DeepCPR.h5` and `DeepCS.h5` in the `example` folder. Extract `data.zip` into the same folder so that the datasets are located at:
+Choose one of the following inference environments:
 
-```text
-example/data/
+| Runtime | Model format | Installation |
+|---|---|---|
+| TensorFlow | `.h5` | `pip install -r requirements.txt` |
+| ONNX Runtime | `.onnx` | `pip install -r requirements-onnx.txt` |
 
+The TensorFlow environment reproduces the original H5-based workflow. 
+The ONNX environment supports inference without requiring TensorFlow, and it can be deployed on other major platforms such as PyTorch.
+
+## Pretrained models and example data
+
+Download the pretrained models and example datasets from
+[Release v1.1.0](https://github.com/YuChuanxiu/DeepCPR/releases/tag/v1.1.0):
+
+- `DeepCPR.h5` and `DeepCS.h5` for the TensorFlow/H5 workflow;
+- `DeepCPR.onnx` and `DeepCS.onnx` for TensorFlow-independent inference;
+- `data.zip` containing example GC-MS datasets.
+
+Place the model files in the `example` directory and extract `data.zip` there.
 The resulting directory structure should be:
 
+```text
 DeepCPR/
 ├── example/
 │   ├── data/
 │   ├── DeepCPR.h5
-│   └── DeepCS.h5
+│   ├── DeepCS.h5
+│   ├── DeepCPR.onnx       # optional: ONNX Runtime workflow
+│   └── DeepCS.onnx        # optional: ONNX Runtime workflow
 └── example.ipynb
 ```
 
-In the first example, the lowest-concentration samples from the fatty acid dataset are used to demonstrate the automatic chromatographic resolution workflow. The OPLS-DA workflow is demonstrated using a peak table extracted from a human plasma dataset resolved by DeepCPR.
+## Quick start: local graphical interface
 
-# Local graphical user interface
+DeepCPR provides a Gradio-based local browser interface for users who prefer
+not to use the command line. All data processing and model inference are
+performed on the user's local machine; raw GC-MS data are not uploaded to an
+external server.
 
-To make DeepCPR accessible to users without programming experience, we provide
-a Gradio-based local graphical interface in `DeepCPR/app.py`. The interface runs
-in a web browser, while all data processing and model inference are performed
-locally. Raw GC-MS data are not uploaded to an external server.
+From the repository root, launch the interface with:
 
-## Main functions
+```bash
+python DeepCPR/app.py
+```
 
-- Upload multiple GC-MS files in CDF or NetCDF format.
-- Use DeepCS and DeepCPR models in H5 or ONNX format.
-- Enable adaptive resolution for segments containing more than five co-eluting components.
-- Optionally generate chromatographic resolution figures.
-- Monitor the processing status and runtime.
-- Preview peak tables, segment information, and resolution figures.
-- Download all results as a ZIP archive.
+The interface opens automatically at:
 
-The exported results include:
+```text
+http://127.0.0.1:7860
+```
+
+The interface supports:
+
+- uploading multiple GC-MS files in CDF or NetCDF format;
+- selecting DeepCS and DeepCPR models in H5 or ONNX format;
+- enabling adaptive resolution and optional figure generation;
+- monitoring processing status and per-file runtime;
+- previewing peak tables, segment information, and resolution figures;
+- downloading all outputs as a ZIP archive.
+
+The output archive may contain:
 
 - `peak_area_table.csv`: merged peak table;
 - `single/*.csv`: peak tables for individual files;
@@ -70,31 +111,35 @@ The exported results include:
 - `ms/**/*.msp`: NIST-compatible mass spectra;
 - `figure/**/*.png`: resolution figures when figure generation is enabled.
 
-## Installation and launch
+> **Note:** The current implementation is a local browser-based application,
+> not a publicly hosted web server or a platform-independent executable.
 
-First install the required dependencies:
+## Python API
 
-```powershell
-pip install -r requirements.txt
+The main programmatic entry point is `data_resolution`:
+
+```python
+from DeepCPR import data_resolution
+
+data_resolution(
+    dataset_path="path/to/raw/files",
+    DeepCS_path="path/to/DeepCS.h5",
+    DeepCPR_path="path/to/DeepCPR.h5",
+    save_path="path/to/results",
+    generate_image=False,
+)
 ```
 
-or
-```powershell
-pip install -r requirements-onnx.txt
-```
+## Example notebook
 
-Place the pretrained DeepCS and DeepCPR model files in the example directory, as described above. 
-From the repository root, launch the interface in terminal with:
-```powershell
-python DeepCPR/app.py
-```
+The complete DeepCPR resolution workflow and representative results are
+demonstrated in [`example.ipynb`](https://github.com/YuChuanxiu/DeepCPR/blob/main/example.ipynb).
+The notebook includes an automatic chromatographic resolution example and an
+OPLS-DA analysis using a resolved human plasma peak table.
 
-The interface will open automatically at: http://127.0.0.1:7860.
-Users can upload GC-MS data, configure the resolution options, start the analysis, inspect the results, and download the complete output archive.
-***Note: This is a local browser-based application rather than a publicly
-hosted web server. All uploaded data remain on the user's computer.***
+## Advanced usage
 
-# Adaptive resolution for more than five co-eluting components
+### Adaptive resolution for more than five co-eluting components
 
 The original network predicts five chromatographic profiles per forward pass.
 The adaptive extension repeatedly applies the same network to the positive
@@ -124,37 +169,21 @@ data_resolution(
 The direct segment-level API is `DeepCPRAdaptive`. The existing
 `data_resolution` behavior is unchanged when `adaptive=False` (the default).
 
-# TensorFlow-independent deployment with ONNX
+### TensorFlow-independent deployment with ONNX
 
-The trained DeepCPR models are also provided in ONNX format. This makes the
-application usable for inference without installing TensorFlow: ONNX is a
-framework-independent model format and ONNX Runtime executes the exported
-models in a standard Python environment. For example, the same inference
-environment may also contain PyTorch or another deep-learning framework; the
-ONNX inference path does not depend on TensorFlow or PyTorch.
+The ONNX models provide a framework-independent inference route. Install the
+ONNX dependencies with:
 
-The TensorFlow/H5 files remain available for reproducing the original training
-and inference setup. To use that route, install:
-
-```powershell
-pip install -r requirements.txt
-```
-
-For deployment without TensorFlow, install the ONNX inference dependencies:
-
-```powershell
+```bash
 pip install -r requirements-onnx.txt
 ```
 
 Both model exports are required for the complete workflow:
 
-- `DeepCS.onnx` performs chromatographic segmentation.
+- `DeepCS.onnx` performs chromatographic segmentation;
 - `DeepCPR.onnx` predicts chromatographic profiles.
 
-Passing explicit `.onnx` paths selects ONNX Runtime directly. No TensorFlow
-installation is needed in this mode. The existing Python API is unchanged:
-
-Example with explicit ONNX paths:
+Pass explicit `.onnx` paths to use ONNX Runtime directly:
 
 ```python
 from DeepCPR import data_resolution
@@ -169,14 +198,23 @@ data_resolution(
 )
 ```
 
-The ONNX adapter uses `onnxruntime` and preserves the model tensor layouts used
-by the Keras exports. The DeepCPR profile model accepts
-`(batch, 128, 1, 800)` and returns `(batch, 128, 1, 5)`.
+The ONNX adapter preserves the tensor layouts used by the Keras exports. The
+DeepCPR profile model accepts `(batch, 128, 1, 800)` and returns
+`(batch, 128, 1, 5)`.
 
 For backward compatibility, an `.h5` path uses TensorFlow when TensorFlow is
 available. If TensorFlow is unavailable, the loader can use a same-stem `.onnx`
 file beside the requested `.h5` file; explicit ONNX paths are recommended for
 TensorFlow-free deployment.
 
-# Information of maintainers
-- 222301019@csu.edu.cn
+## Downstream analysis
+
+The resolved peak tables can be used for downstream statistical analysis and
+compound identification. `workflow.py` provides a seamless workflow from raw
+datasets to peak tables, resolved mass spectra, and potential biomarkers.
+The `msp_to_csv.py` utility converts DeepCPR MSP files to CSV format for tools
+such as FastEI.
+
+## Maintainers
+
+222301019@csu.edu.cn
