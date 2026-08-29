@@ -14,3 +14,4 @@ PyWavelets==1.6.0
 pyteomics==4.7.1
 tqdm==4.66.2
 seaborn==0.13.0
+gradio==4.44.1
