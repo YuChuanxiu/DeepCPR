@@ -1,0 +1,16 @@
+python==3.10
+onnxruntime==1.13.1
+scipy==1.13.0
+numpy==1.26.4
+matplotlib==3.8.4
+pandas==2.2.2
+scikit-learn==1.4.2
+seaborn==0.13.2
+tensorly==0.8.1
+pytz==2024.1
+pillow==10.3.0
+numba==0.59.1
+PyWavelets==1.6.0
+pyteomics==4.7.1
+tqdm==4.66.2
+gradio==4.44.1
