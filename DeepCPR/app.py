@@ -18,9 +18,8 @@ import matplotlib
 matplotlib.use("Agg")  # headless backend: no figure windows pop up at runtime
 import gradio as gr
 import pandas as pd
-from PIL import Image
 
-# 兼容直接运行（python app.py）与包模块方式运行（python -m DeepCPR.app）
+# Support both direct execution and package-module execution.
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -45,6 +44,7 @@ DEFAULT_DEEPCS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__
 DEFAULT_DEEPCPR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "example", "DeepCPR.h5")
 RUNS_DIR = os.path.join(REPO_ROOT, "gradio_runs")  # all results are saved here
 CDF_SUFFIXES = (".cdf", ".nc", ".netcdf")
+
 def _collect_table(folder):
 	"""Read all CSV files in a folder and merge them into one DataFrame."""
 	frames = []
@@ -53,25 +53,23 @@ def _collect_table(folder):
 		df.insert(0, "file", os.path.basename(c)[:-4])
 		frames.append(df)
 	return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-def _tif_to_png(save_dir):
-	"""Convert the .tif figures produced by the core code to .png.
-	The core code itself is not modified.
-	"""
-	pngs = []
-	pattern = os.path.join(save_dir, "figure", "**", "*.tif")
-	for tif in glob.glob(pattern, recursive=True):
-		png = os.path.splitext(tif)[0] + ".png"
-		try:
-			Image.open(tif).convert("RGB").save(png)
-			os.remove(tif)
-			pngs.append(png)
-		except Exception as e:
-			print("[warning] tif->png conversion failed:", tif, e)
-	return pngs
+
+def _collect_figures(save_dir, image_formats):
+    """Collect resolution figures in all user-selected output formats."""
+    figures = []
+    for image_format in image_formats:
+        figures.extend(glob.glob(
+            os.path.join(save_dir, "figure", "**", f"*.{image_format}"),
+            recursive=True,
+        ))
+    return sorted(figures)
+	
 def resolve(files, deepcs_path, deepcpr_path, adaptive,
-			max_iter, max_comp, gen_image, progress=gr.Progress()):
+			max_iter, max_comp, gen_image, image_formats,
+			progress=gr.Progress()):
 	"""Run DeepCPR resolution on the uploaded CDF files and collect outputs."""
-	t0 = time.time()
+	# Use a monotonic clock for elapsed-time measurements.
+	t0 = time.perf_counter()
 	# ---- input validation ----
 	if not files:
 		raise gr.Error("Please upload at least one GC-MS data file first.")
@@ -86,6 +84,13 @@ def resolve(files, deepcs_path, deepcpr_path, adaptive,
 		raise gr.Error(
 			"No CDF files found in the upload "
 			"(supported extensions: .cdf / .nc / .netcdf)")
+	image_formats = [str(value).strip().lower() for value in image_formats]
+	if gen_image and not image_formats:
+		raise gr.Error("Select at least one figure format: PNG and/or SVG.")
+	if any(value not in {"png", "svg"} for value in image_formats):
+		raise gr.Error("Figure formats must be PNG and/or SVG.")
+	if not image_formats:
+		image_formats = ["png"]
 	# ---- create the output folder for this run ----
 	run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 	save_dir = os.path.join(RUNS_DIR, run_id)
@@ -100,7 +105,7 @@ def resolve(files, deepcs_path, deepcpr_path, adaptive,
 			progress(i / n, desc=f"[{i+1}/{n}] Resolving {fname} "
 						"(each file takes several minutes; detailed progress "
 						"is printed to the terminal)")
-			t_file = time.time()
+			t_file = time.perf_counter()
 			# keep only the current file in the temporary input folder
 			for old in os.listdir(tmp_in):
 				os.remove(os.path.join(tmp_in, old))
@@ -112,10 +117,11 @@ def resolve(files, deepcs_path, deepcpr_path, adaptive,
 				adaptive_kwargs=({"max_iterations": int(max_iter),
 									"max_components": int(max_comp)}
 									if adaptive else None),
+				image_formats=image_formats,
 			)
 			if gen_image:
-				figures += _tif_to_png(save_dir)
-			per_file_time.append(f"{fname}: {(time.time()-t_file)/60:.1f} min")
+				figures = _collect_figures(save_dir, image_formats)
+			per_file_time.append(f"{fname}: {time.perf_counter()-t_file:.3f} s")
 			gc.collect()
 		progress(0.97, desc="Collecting results...")
 		# merge the peak tables (same as workflow.py; a failure here
@@ -134,13 +140,16 @@ def resolve(files, deepcs_path, deepcpr_path, adaptive,
 		zip_path = shutil.make_archive(
 			os.path.join(RUNS_DIR, f"DeepCPR_results_{run_id}"), "zip", save_dir)
 		n_peaks = len(peak_df)
+		figure_patterns = ", ".join(
+			f"`figure/**/*.{image_format}`" for image_format in image_formats
+		)
+		figure_note = f" | {figure_patterns} figures" if gen_image else ""
 		status = (
 			f"✅ **Done**: {n} file(s), **{n_peaks}** peaks resolved in total, "
-			f"total time {(time.time()-t0)/60:.1f} min\n\n"
+			f"total time {time.perf_counter()-t0:.3f} s\n\n"
 			f"📁 Results folder: `{save_dir}`{merged_note}\n"
 			"- `single/*.csv` peak tables | `seg/*.csv` segment info | "
-			"`ms/**/*.msp` mass spectra (NIST compatible) | "
-			"`figure/**/*.png` figures\n\n"
+			f"`ms/**/*.msp` mass spectra (NIST compatible){figure_note}\n\n"
 			"⏱ Time per file: " + "; ".join(per_file_time)
 		)
 		gallery = [(p, os.path.relpath(p, save_dir)) for p in figures]
@@ -220,7 +229,9 @@ with gr.Blocks(title="DeepCPR",
 						max_comp_in = gr.Slider(6, 32, value=32, step=1,
 												label="max_components")
 					figs_in = gr.Checkbox(
-						False, label="Generate figures (PNG; increases runtime)")
+						False, label="Generate figures (increases runtime)")
+					image_formats_in = gr.CheckboxGroup(
+						["PNG", "SVG"], value=["PNG"], label="Figure formats")
 				run_btn = gr.Button("▶ Start resolution", variant="primary",
 									elem_id="run_btn")
 			with gr.Column(scale=3):
@@ -242,7 +253,7 @@ with gr.Blocks(title="DeepCPR",
 			run_btn.click(
 				resolve,
 				[files_in, deepcs_in, deepcpr_in, adaptive_in,
-					max_iter_in, max_comp_in, figs_in],
+					max_iter_in, max_comp_in, figs_in, image_formats_in],
 				[status_out, peak_out, seg_out, gallery_out, zip_out],
 			)
 if __name__ == "__main__":
