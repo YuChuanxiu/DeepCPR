@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Dec 28 17:59:41 2022
+Created on Fri Aug 14 11:13:10 2026
 
 @author: ZNDX001
 """
+
 
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import Model, layers
 import numpy as np
 import matplotlib.pyplot as plt
+import datetime
 from tensorflow.python.framework import ops
 import os
 import math
@@ -18,16 +20,16 @@ from tensorflow import float32
 
 def channel_attention(inputs, ratio=8):
     channel = inputs.shape[-1]
-
+    
     x_max = layers.GlobalMaxPooling2D()(inputs)
     x_avg = layers.GlobalAveragePooling2D()(inputs)
-
-    x_max = layers.Reshape([1, 1, -1])(x_max)
-    x_avg = layers.Reshape([1, 1, -1])(x_avg)
+ 
+    x_max = layers.Reshape([1,1,-1])(x_max)
+    x_avg = layers.Reshape([1,1,-1])(x_avg)
 
     x_max = layers.Dense(channel/ratio)(x_max)
     x_avg = layers.Dense(channel/ratio)(x_avg)
-
+ 
     x_max = layers.Activation('relu')(x_max)
     x_avg = layers.Activation('relu')(x_avg)
 
@@ -51,26 +53,16 @@ def eca_block(inputs, b=1, gama=2):
     x = layers.Reshape(target_shape=(in_channel, 1))(x)
     x = layers.Conv1D(filters=1, kernel_size=kernel_size, padding='same', use_bias=False)(x)
     x = tf.nn.sigmoid(x)
-    x = layers.Reshape((1, 1, in_channel))(x)
+    x = layers.Reshape((1,1,in_channel))(x)
     outputs = layers.multiply([inputs, x])
     return outputs
 
 
 def XabBlock_s(input_tensor, middle_filters, out_filters, kernel_size, stride1, stride2, l2rate, keep_prop):
-    x = layers.SeparableConvolution2D(
-        filters=middle_filters,
-        kernel_size=kernel_size,
-        strides=stride1,
-        padding='same',
-        kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
+    x = layers.SeparableConvolution2D(filters = middle_filters, kernel_size = kernel_size, strides = stride1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
-    x = layers.SeparableConvolution2D(
-        filters=out_filters,
-        kernel_size=kernel_size,
-        strides=stride2,
-        padding='same',
-        kernel_regularizer=keras.regularizers.l2(l2rate))(x)
+    x = layers.SeparableConvolution2D(filters = out_filters, kernel_size = kernel_size, strides = stride2, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(x)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
     x = dropblock(x, keep_prop, 3)
@@ -78,82 +70,46 @@ def XabBlock_s(input_tensor, middle_filters, out_filters, kernel_size, stride1, 
 
 
 def XabBlock_c(input_tensor, middle_filters, out_filters, kernel_size, stride1, stride2, l2rate, keep_prop):
-    x = layers.Conv2D(
-        filters=middle_filters,
-        kernel_size=kernel_size,
-        strides=stride1,
-        padding='same',
-        kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
+    x = layers.Conv2D(filters = middle_filters, kernel_size = kernel_size, strides = stride1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
-    x = layers.Conv2D(
-        filters=out_filters,
-        kernel_size=kernel_size,
-        strides=stride2,
-        padding='same',
-        kernel_regularizer=keras.regularizers.l2(l2rate))(x)
+    x = layers.Conv2D(filters = out_filters, kernel_size = kernel_size, strides = stride2, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(x)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
     x = dropblock(x, keep_prop, 3)
     return x
 
 
-def UpBlock(input_tensor, filters, kernel_size, stride1, l2rate, keep_prop):
-    x = layers.Conv2DTranspose(
-        filters=filters,
-        kernel_size=kernel_size,
-        strides=stride1,
-        padding='same',
-        kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
+def UpBlock(input_tensor, filters, kernel_size, stride1, l2rate):
+    x = layers.Conv2DTranspose(filters = filters, kernel_size = kernel_size, strides = stride1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
-    x = dropblock(x, keep_prop, 3)
+    #x = dropblock(x, keep_prop, 3)
     return x
 
 
-def ConvBlock2(input_tensor, filters1, kernel_size, stride1, l2rate, keep_prop):
-    x = layers.Conv2D(
-        filters=filters1,
-        kernel_size=kernel_size,
-        strides=stride1,
-        padding='same',
-        kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
+def ConvBlock2(input_tensor, filters1, kernel_size, stride1, l2rate):
+    x = layers.Conv2D(filters = filters1, kernel_size = kernel_size, strides = stride1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
-    x = layers.Conv2D(
-        filters=filters1,
-        kernel_size=kernel_size,
-        strides=stride1,
-        padding='same',
-        kernel_regularizer=keras.regularizers.l2(l2rate))(x)
+    x = layers.Conv2D(filters = filters1, kernel_size = kernel_size, strides = stride1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(x)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
-    x = dropblock(x, keep_prop, 3)
+    #x = dropblock(x, keep_prop, 3)
     return x
-
 
 def finalBlock(input_tensor, filters1, filters2, l2rate):
-    x = layers.Conv2D(
-        filters=filters1,
-        kernel_size=(1, 1),
-        strides=1,
-        padding='same',
-        kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
+    x = layers.Conv2D(filters = filters1, kernel_size = (1,1), strides = 1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(input_tensor)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
-    x = layers.Conv2D(
-        filters=filters2,
-        kernel_size=(1, 1),
-        strides=1,
-        padding='same',
-        kernel_regularizer=keras.regularizers.l2(l2rate))(x)
+    x = layers.Conv2D(filters = filters2, kernel_size = (1,1), strides = 1, padding = 'same', kernel_regularizer=keras.regularizers.l2(l2rate))(x)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
     return x
 
 
 def dropblock(x, keep_prob, block_size):
-    _, w, h, c = x.shape.as_list()
+    _,w,h,c = x.shape.as_list()
     gamma = (1 - keep_prob) * w / (block_size * (w - block_size + 1))
     sampling_mask_shape = tf.stack([1, w - block_size + 1, 1, c])
     noise_dist = tf.compat.v1.distributions.Bernoulli(probs=gamma)
@@ -164,109 +120,111 @@ def dropblock(x, keep_prob, block_size):
     pad_shape = [[0, 0], [tl, br], [0, 0], [0, 0]]
     mask = tf.pad(mask, pad_shape)
     mask = tf.nn.max_pool(mask, [1, block_size, 1, 1], [1, 1, 1, 1], 'SAME')
-    mask = tf.cast(1 - mask, tf.float32)
-    return tf.multiply(x, mask)
+    mask = tf.cast(1 - mask,tf.float32)
+    return tf.multiply(x,mask)
 
 
 def channel_shuffle(x):
     g = 2
     b, h, w, c = x.shape
     x = tf.reshape(x, [-1, h, w, g, c // g])
-    x = tf.transpose(x, perm=[0, 1, 2, 4, 3])
-    x = tf.reverse(x, [-1])
+    x = tf.transpose(x, perm = [0, 1, 2, 4, 3])
+    x = tf.reverse(x,[-1])
     x = tf.reshape(x, [-1, h, w, c])
     return x
 
 
 def UNet3plus_2c(input_shape):
-    inputs = keras.Input(shape=input_shape)
+    inputs = keras.Input(shape = input_shape) #[128,1,800]
 
-    XEe1_1 = XabBlock_c(inputs, 400, 400, (3, 1), 1, 1, 0.003, 0.9)
+    XEe1_1 = XabBlock_c(inputs, 400, 400, (3,1), 1, 1, 0.003, 0.9)
     XEe1_1 = channel_attention(XEe1_1)
-    XEe1_1 = channel_shuffle(XEe1_1)
-
-    XEe1_2 = XabBlock_c(XEe1_1, 200, 200, (3, 1), 1, 1, 0.003, 0.9)
+    XEe1_1 = channel_shuffle(XEe1_1) #[128,1,200]
+    
+    XEe1_2 = XabBlock_c(XEe1_1, 200, 200, (3,1), 1, 1, 0.003, 0.9) #[128,1,128]
     XEe1_2 = channel_attention(XEe1_2)
-    XEe1_2 = channel_shuffle(XEe1_2)
-
-    XEe1_3 = XabBlock_c(XEe1_2, 100, 100, (3, 1), 1, 1, 0.003, 0.9)
+    XEe1_2 = channel_shuffle(XEe1_2) #[128,1,100]
+    
+    XEe1_3 = XabBlock_c(XEe1_2, 100, 100, (3,1), 1, 1, 0.003, 0.9)
     XEe1_3 = channel_attention(XEe1_3)
-    XEe1_3 = channel_shuffle(XEe1_3)
+    XEe1_3 = channel_shuffle(XEe1_3) #[128,1,50]
 
-    XEe1 = XabBlock_c(XEe1_2, 128, 128, (3, 1), 1, 1, 0.003, 0.9)
-    XEe1 = channel_shuffle(XEe1)
-
+    XEe1 = XabBlock_c(XEe1_3, 128, 128, (3,1), 1, 1, 0.003, 0.9)
+    XEe1 = channel_attention(XEe1)
+    XEe1 = channel_shuffle(XEe1) #[128,1,64]
+    
     XEe2 = layers.MaxPooling2D(pool_size=(2, 1), strides=2)(XEe1)
-    XEe2 = XabBlock_c(XEe2, 256, 256, (3, 1), 1, 1, 0.004, 0.9)
-    XEe2 = channel_shuffle(XEe2)
+    XEe2 = XabBlock_c(XEe2, 256, 256, (3,1), 1, 1, 0.004, 0.9) #[64,1,256]
+    XEe2 = channel_attention(XEe2)
+    XEe2 = channel_shuffle(XEe2) #[64,1,128]
 
     XEe3 = layers.MaxPooling2D(pool_size=(2, 1), strides=2)(XEe2)
-    XEe3 = XabBlock_c(XEe3, 512, 512, (3, 1), 1, 1, 0.005, 0.9)
-    XEe3 = channel_shuffle(XEe3)
-
+    XEe3 = XabBlock_c(XEe3, 512, 512, (3,1), 1, 1, 0.005, 0.9) #[32,1,512])
+    XEe3 = channel_attention(XEe3)
+    XEe3 = channel_shuffle(XEe3) #[32,1,256]
+    
     XEe4 = layers.MaxPooling2D(pool_size=(2, 1), strides=2)(XEe3)
-    XEe4 = XabBlock_c(XEe4, 1024, 1024, (3, 1), 1, 1, 0.006, 0.9)
-    XEe4 = channel_shuffle(XEe4)
-
-    XEe4_up = tf.image.resize(XEe4, [32, 1], method='bicubic')
-    XEe4_up = ConvBlock2(XEe4_up, 512, (3, 1), 1, 0.01, 0.9)
+    XEe4 = XabBlock_c(XEe4, 1024, 1024, (3,1), 1, 1, 0.006, 0.9) #[16,1,1024]
+    XEe4 = channel_attention(XEe4)
+    XEe4 = channel_shuffle(XEe4) #[16,1,512]
+    
+    XEe4_up = tf.image.resize(XEe4, [32,1], method='bicubic')
+    XEe4_up = ConvBlock2(XEe4_up, 512, (3,1), 1, 0.01)
     XEe2_PT_XDe3 = layers.MaxPooling2D(pool_size=(2, 1), strides=2)(XEe2)
-    XEe2_PT_XDe3 = ConvBlock2(XEe2_PT_XDe3, 512, (3, 1), 1, 0.01, 0.9)
+    XEe2_PT_XDe3 = ConvBlock2(XEe2_PT_XDe3, 512, (3,1), 1, 0.01)
     XEe1_PT_XDe3 = layers.MaxPooling2D(pool_size=(4, 1), strides=4)(XEe1)
-    XEe1_PT_XDe3 = ConvBlock2(XEe1_PT_XDe3, 512, (3, 1), 1, 0.01, 0.9)
-    XDe3 = layers.concatenate([XEe4_up, XEe3, XEe2_PT_XDe3, XEe1_PT_XDe3], axis=3)
+    XEe1_PT_XDe3 = ConvBlock2(XEe1_PT_XDe3, 512, (3,1), 1, 0.01)
+    XDe3 = layers.concatenate([XEe4_up, XEe3, XEe2_PT_XDe3, XEe1_PT_XDe3], axis = 3)
     XDe3 = channel_shuffle(XDe3)
-    XDe3 = XabBlock_s(XDe3, 512, 512, (3, 1), 1, 1, 0.007, 0.9)
-    XDe3 = channel_shuffle(XDe3)
+    XDe3 = XabBlock_s(XDe3, 512, 512, (3,1), 1, 1, 0.007, 0.9) #[32,1,512]
 
-    XDe3_up = tf.image.resize(XDe3, [64, 1], method='bicubic')
-    XDe3_up = ConvBlock2(XDe3_up, 256, (3, 1), 1, 0.01, 0.9)
-    XEe4_UP_XDe2 = tf.image.resize(XEe4, [64, 1], method='bicubic')
-    XEe4_UP_XDe2 = ConvBlock2(XEe4_UP_XDe2, 256, (3, 1), 1, 0.01, 0.9)
+    XDe3_up = tf.image.resize(XDe3, [64,1], method='bicubic')
+    XDe3_up = ConvBlock2(XDe3_up, 256, (3,1), 1, 0.01)
+    XEe4_UP_XDe2 = tf.image.resize(XEe4, [64,1], method='bicubic')
+    XEe4_UP_XDe2 = ConvBlock2(XEe4_UP_XDe2, 256, (3,1), 1, 0.01)
     XEe1_PT_XDe2 = layers.MaxPooling2D(pool_size=(2, 1), strides=2)(XEe1)
-    XEe1_PT_XDe2 = ConvBlock2(XEe1_PT_XDe2, 256, (3, 1), 1, 0.01, 0.9)
-    XDe2 = layers.concatenate([XDe3_up, XEe4_UP_XDe2, XEe2, XEe1_PT_XDe2], axis=3)
+    XEe1_PT_XDe2 = ConvBlock2(XEe1_PT_XDe2, 256, (3,1), 1, 0.01)
+    XDe2 = layers.concatenate([XDe3_up, XEe4_UP_XDe2, XEe2, XEe1_PT_XDe2], axis = 3)
     XDe2 = channel_shuffle(XDe2)
-    XDe2 = XabBlock_s(XDe2, 256, 256, (3, 1), 1, 1, 0.008, 0.9)
-    XDe2 = channel_shuffle(XDe2)
+    XDe2 = XabBlock_s(XDe2, 256, 256, (3,1), 1, 1, 0.008, 0.9) #[64,1,256]
 
-    XDe2_up = tf.image.resize(XDe2, [128, 1], method='bicubic')
-    XDe2_up = ConvBlock2(XDe2_up, 128, (3, 1), 1, 0.01, 0.9)
-    XDe3_UP_XDe1 = tf.image.resize(XDe3, [128, 1], method='bicubic')
-    XDe3_UP_XDe1 = ConvBlock2(XDe3_UP_XDe1, 128, (3, 1), 1, 0.01, 0.9)
-    XEe4_UP_XDe1 = tf.image.resize(XEe4, [128, 1], method='bicubic')
-    XEe4_UP_XDe1 = ConvBlock2(XEe4_UP_XDe1, 128, (3, 1), 1, 0.01, 0.9)
-    XDe1 = layers.concatenate([XDe2_up, XDe3_UP_XDe1, XEe4_UP_XDe1, XEe1], axis=3)
+    XDe2_up = tf.image.resize(XDe2, [128,1], method='bicubic')
+    XDe2_up = ConvBlock2(XDe2_up, 128, (3,1), 1, 0.01)
+    XDe3_UP_XDe1 = tf.image.resize(XDe3, [128,1], method='bicubic')
+    XDe3_UP_XDe1 = ConvBlock2(XDe3_UP_XDe1, 128, (3,1), 1, 0.01)
+    XEe4_UP_XDe1 = tf.image.resize(XEe4, [128,1], method='bicubic')
+    XEe4_UP_XDe1 = ConvBlock2(XEe4_UP_XDe1, 128, (3,1), 1, 0.01)
+    XDe1 = layers.concatenate([XDe2_up, XDe3_UP_XDe1, XEe4_UP_XDe1, XEe1], axis = 3)
     XDe1 = channel_shuffle(XDe1)
-    XDe1 = XabBlock_s(XDe1, 128, 128, (3, 1), 1, 1, 0.009, 0.9)
-    XDe1 = channel_shuffle(XDe1)
+    XDe1 = XabBlock_s(XDe1, 128, 128, (3,1), 1, 1, 0.009, 0.9) #[128,1,128]
 
-    output4 = tf.image.resize(XEe4, [128, 1], method='bicubic')
-    output4 = ConvBlock2(output4, 256, (3, 1), 1, 0.01, 0.9)
+    output4 = tf.image.resize(XEe4, [128,1], method='bicubic')
+    output4 = finalBlock(output4, 256, 64, 0.01)
 
-    output3 = tf.image.resize(XDe3, [128, 1], method='bicubic')
-    output3 = ConvBlock2(output3, 128, (3, 1), 1, 0.01, 0.9)
+    output3 = tf.image.resize(XDe3, [128,1], method='bicubic')    
+    output3 = finalBlock(output3, 128, 64, 0.01)
 
-    output2 = tf.image.resize(XDe2, [128, 1], method='bicubic')
-    output2 = ConvBlock2(output2, 64, (3, 1), 1, 0.01, 0.9)
+    output2 = tf.image.resize(XDe2, [128,1], method='bicubic')
+    output2 = finalBlock(output2, 64, 64, 0.01)
 
-    output1 = ConvBlock2(XDe1, 64, (3, 1), 1, 0.01, 0.9)
+    output1 = finalBlock(XDe1, 64, 64, 0.01)
 
-    outputs = layers.concatenate([output4, output3, output2, output1], axis=3)
+    outputs = layers.concatenate([output4, output3, output2, output1], axis = 3)
     outputs = channel_shuffle(outputs)
 
-    outputs = layers.Conv2D(filters=100, kernel_size=(3, 1), strides=1, padding='same', kernel_regularizer=keras.regularizers.l2(0.01))(outputs)
+    outputs = layers.Conv2D(filters = 100, kernel_size = (3,1), strides = 1, padding = 'same', kernel_regularizer=keras.regularizers.l2(0.01))(outputs)
     outputs = layers.BatchNormalization()(outputs)
     outputs = layers.ReLU()(outputs)
-    outputs = layers.Conv2D(filters=40, kernel_size=(3, 1), strides=1, padding='same', kernel_regularizer=keras.regularizers.l2(0.01))(outputs)
+    outputs = layers.Conv2D(filters = 40, kernel_size = (3,1), strides = 1, padding = 'same', kernel_regularizer=keras.regularizers.l2(0.01))(outputs)
     outputs = layers.BatchNormalization()(outputs)
     outputs = layers.ReLU()(outputs)
-    outputs = layers.Conv2D(filters=15, kernel_size=(3, 1), strides=1, padding='same', kernel_regularizer=keras.regularizers.l2(0.01))(outputs)
+    outputs = layers.Conv2D(filters = 10, kernel_size = (3,1), strides = 1, padding = 'same', kernel_regularizer=keras.regularizers.l2(0.01))(outputs)
     outputs = layers.BatchNormalization()(outputs)
     outputs = layers.ReLU()(outputs)
-    outputs = layers.Conv2D(filters=5, kernel_size=(3, 1), strides=1, padding='same', kernel_regularizer=keras.regularizers.l2(0.01))(outputs)
+    outputs = layers.Conv2D(filters = 5, kernel_size = (3,1), strides = 1, padding = 'same', kernel_regularizer=keras.regularizers.l2(0.01))(outputs)
 
     model = Model(inputs, outputs)
+
     return model
 
 
@@ -319,7 +277,7 @@ def R_squared(y_true, y_pred):
 
 
 def PW_loss(y_true, y_pred):
-    weight_high = tf.cast(50, dtype=float32)
+    weight_high = tf.cast(100, dtype=float32)
     weight_low = tf.cast(10, dtype=float32)
     threshold = tf.cast(0.001, dtype=float32)
 
@@ -336,7 +294,7 @@ def PW_loss(y_true, y_pred):
 if __name__ == '__main__':
     train_path = u'C:/DeepEER2/data/23_04_18/train'
     validation_path = u'C:/DeepEER2/data/23_04_18/validation'
-    savepath = 'C:/DeepEER2/model_out/23_04_18/SepConv/optimize64145'
+    savepath = 'C:/DeepEER2/model_out/23_04_18/SepConv/r2_loss_100_10'
     mkdir(savepath)
 
     tf.keras.backend.clear_session()
@@ -345,12 +303,12 @@ if __name__ == '__main__':
     model = UNet3plus_2c(input_shape=[128, 1, 800])
     model.summary()
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=8.94883e-6, beta_1=0.9, beta_2=0.999, epsilon=1e-8, decay=0.000, amsgrad=False),
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5, beta_1=0.9, beta_2=0.999, epsilon=1e-8, decay=0.000, amsgrad=False),
                   loss=PW_loss,
                   metrics=[R_squared])
 
-    batch_size = 64
-    epochs = 145
+    batch_size = 128
+    epochs = 150
 
     callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, restore_best_weights=True)
 
