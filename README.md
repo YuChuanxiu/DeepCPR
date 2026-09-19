@@ -215,6 +215,9 @@ datasets to peak tables, resolved mass spectra, and potential biomarkers.
 The `msp_to_csv.py` utility converts DeepCPR MSP files to CSV format for tools
 such as FastEI.
 
+## Fine-tuning model
+An additional Python program named fine_tune_deepcpr.py is provided for fine tuning with additional GC MS segments and corresponding chromatographic profile labels that satisfy the required model dimensions.
+
 ## Maintainers
 
 222301019@csu.edu.cn
