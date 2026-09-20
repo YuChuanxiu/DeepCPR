@@ -11,8 +11,8 @@ spectra using iterative multivariate curve resolution (MCR) methods. The
 workflow produces resolved peak tables and mass spectra for downstream
 compound identification and statistical analysis.
 
-The repository also includes an OPLS-DA workflow for discriminant analysis and
-biomarker screening. Resolved spectra can be searched against the NIST library
+The repository also includes the leakage controlled repeated OPLS-DA analysis
+used for the clinical plasma peak table. Resolved spectra can be searched against the NIST library
 or converted for use with [FastEI](https://github.com/Qiong-Yang/FastEI/tree/main).
 
 <div align="center">
@@ -134,8 +134,40 @@ data_resolution(
 
 The complete DeepCPR resolution workflow and representative results are
 demonstrated in [`example.ipynb`](https://github.com/YuChuanxiu/DeepCPR/blob/main/example.ipynb).
-The notebook includes an automatic chromatographic resolution example and an
-OPLS-DA analysis using a resolved human plasma peak table.
+The notebook includes an automatic chromatographic resolution example.
+
+## Reproducing the clinical plasma OPLS-DA analysis
+
+The corrected clinical analysis starts from the fixed 136 sample by 53
+variable peak area matrix in [`example/PlasmaTable.csv`](example/PlasmaTable.csv).
+The first 61 rows are healthy controls and are assigned `+1`. The following 75
+rows are men with semen abnormalities and are assigned `-1`. These labels are
+intentionally defined in [`DeepCPR/q2_nested_cv.py`](DeepCPR/q2_nested_cv.py),
+and the script checks the matrix dimensions and sample order before analysis.
+
+The analysis uses 100 repeated stratified outer ten fold divisions. Scaling
+parameters are calculated from the outer calibration samples only. Within each
+outer calibration sample, ten fold Q2 evaluation selects between zero and nine
+orthogonal components. An additional component is retained when its incremental
+Q2 is at least 0.01. Outer validation samples are used only for class prediction.
+VIP4t is calculated in each outer calibration model and averaged over the 1000
+models.
+
+From the repository root, run:
+
+```bash
+python DeepCPR/q2_nested_cv.py --input example/PlasmaTable.csv --output-dir example/results --repeats 100 --seed 20260904 --max-components 9 --inner-folds 10 --q2-threshold 0.01
+```
+
+The OPLS-DA and VIP4t calculations are implemented in
+[`DeepCPR/oplsda_core.py`](DeepCPR/oplsda_core.py). Expected numerical outputs
+and Figure 4a files are provided in [`example/results`](example/results).
+With the parameters above, the mean accuracy is 98.54 percent, the mean
+sensitivity is 97.37 percent, and the mean specificity is 99.97 percent.
+
+This analysis evaluates OPLS-DA performance conditional on the supplied fixed
+peak area matrix. It does not repeat chromatographic peak extraction or
+retention time matching and is not an independent clinical validation.
 
 ## Advanced usage
 
@@ -210,8 +242,10 @@ TensorFlow-free deployment.
 ## Downstream analysis
 
 The resolved peak tables can be used for downstream statistical analysis and
-compound identification. `workflow.py` provides a seamless workflow from raw
-datasets to peak tables, resolved mass spectra, and potential biomarkers.
+compound identification. `workflow.py` processes raw datasets into peak tables
+and resolved mass spectra. The clinical OPLS-DA scripts are
+[`DeepCPR/q2_nested_cv.py`](DeepCPR/q2_nested_cv.py) and
+[`DeepCPR/oplsda_core.py`](DeepCPR/oplsda_core.py).
 The `msp_to_csv.py` utility converts DeepCPR MSP files to CSV format for tools
 such as FastEI.
 
