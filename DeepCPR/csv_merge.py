@@ -55,7 +55,9 @@ def merge_dataframes(dfs, file_names):
     # Initialising the structure of the merged DataFrame
     merged['rt'] = sorted(rt_values)
     for i, df in enumerate(dfs):
-        merged[file_names[i].split('.')[0]] = 0
+        # Peak areas are floating-point values; initialize accordingly so
+        # pandas does not need to assign floats into an integer column.
+        merged[file_names[i].split('.')[0]] = 0.0
 
     # Merging 'peak area' data
     for i, df in enumerate(dfs):
