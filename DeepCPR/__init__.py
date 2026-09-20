@@ -12,15 +12,6 @@ def __getattr__(name):
     if name == "peaktable":
         from .csv_merge import peaktable
         return peaktable
-    if name in {"OPLS", "scatter_cluster", "vip_objection", "heatmap", "permutation_test"}:
-        from .OPLSDA import OPLS, heatmap, permutation_test, scatter_cluster, vip_objection
-        return {
-            "OPLS": OPLS,
-            "scatter_cluster": scatter_cluster,
-            "vip_objection": vip_objection,
-            "heatmap": heatmap,
-            "permutation_test": permutation_test,
-        }[name]
     if name == "netcdf_reader":
         from .NetCDF import netcdf_reader
         return netcdf_reader
@@ -34,11 +25,6 @@ __all__ = [
     "data_resolution",
     "DeepCPRAdaptive",
     "peaktable",
-    "OPLS",
-    "scatter_cluster",
-    "vip_objection",
-    "heatmap",
-    "permutation_test",
     "netcdf_reader",
     "Chromseg",
 ]
