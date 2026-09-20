@@ -5,6 +5,7 @@ numpy==1.26.4
 matplotlib==3.8.4
 pandas==2.2.2
 scikit-learn==1.4.2
+joblib==1.4.0
 seaborn==0.13.2
 tensorly ==0.8.1
 pytz==2024.1
