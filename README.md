@@ -33,7 +33,12 @@ or converted for use with [FastEI](https://github.com/Qiong-Yang/FastEI/tree/mai
 ## Installation
 
 We recommend using [Conda](https://conda.io/docs/user-guide/install/download.html)
-and [pip](https://pypi.org/project/pip/). Python 3.10 is supported.
+to create a Python 3.10 environment and [pip](https://pypi.org/project/pip/)
+to install the Python packages. The Python version is intentionally not listed
+as a pip requirement because pip cannot create or manage the interpreter itself.
+Use a separate environment for each runtime option below; do not install the
+TensorFlow and ONNX requirement files into the same environment unless model
+conversion is required.
 
 Clone the repository and enter its root directory:
 
@@ -42,15 +47,94 @@ git clone https://github.com/YuChuanxiu/DeepCPR.git
 cd DeepCPR
 ```
 
-Choose one of the following inference environments:
+### H5/TensorFlow CPU-compatible inference
+
+Use this option on a machine without a supported NVIDIA GPU or when CPU-only
+execution is preferred. The requirements file installs the CPU-compatible
+TensorFlow Python package:
+
+```bash
+conda create -n DeepCPR_tf210_cpu python=3.10
+conda activate DeepCPR_tf210_cpu
+python -m pip install -r requirements.txt
+python -m pip check
+```
+
+Verify the installation:
+
+```bash
+python -c "import tensorflow as tf; print(tf.__version__); print(tf.config.list_physical_devices('GPU'))"
+```
+
+TensorFlow should report version `2.10.0`. An empty GPU list is expected in a
+CPU-only environment.
+
+### H5/TensorFlow GPU inference on Windows
+
+TensorFlow 2.10 is the last TensorFlow release with native Windows GPU support.
+There is no separate GPU-specific Python requirements file. GPU users should
+install the same Python dependencies as the CPU-compatible environment, then
+add the matching CUDA runtime and cuDNN libraries in the Conda environment:
+
+```bash
+conda create -n DeepCPR_tf210_gpu python=3.10
+conda activate DeepCPR_tf210_gpu
+conda install -c conda-forge cudatoolkit=11.2.2 cudnn=8.1.0
+python -m pip install -r requirements.txt
+python -m pip check
+```
+
+The GPU environment is optional. For small chromatographic files, GPU execution
+can be slower than CPU execution because model and data transfer overhead may
+dominate the inference time. Verify that TensorFlow can see the GPU:
+
+```bash
+python -c "import tensorflow as tf; print(tf.__version__); print(tf.config.list_physical_devices('GPU'))"
+```
+
+The output must contain at least one `PhysicalDevice` with `device_type='GPU'`.
+If the list is empty, DeepCPR will still run but TensorFlow inference will use
+the CPU. These native Windows GPU instructions were validated with TensorFlow
+2.10, CUDA 11.2, cuDNN 8.1, and an NVIDIA GPU; newer native Windows TensorFlow
+releases do not provide the same CUDA path.
+
+### ONNX Runtime CPU inference
+
+The current ONNX adapter explicitly uses `CPUExecutionProvider`; therefore the
+published ONNX route is CPU-only and does not require TensorFlow, CUDA, or
+cuDNN:
+
+```bash
+conda create -n DeepCPR_onnx python=3.10
+conda activate DeepCPR_onnx
+python -m pip install -r requirements-onnx.txt
+python -m pip check
+```
+
+Verify the ONNX provider:
+
+```bash
+python -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
+```
+
+The expected runtime version is `1.13.1`, and the provider list must include
+`CPUExecutionProvider`.
+
+The existing `tf210_onnx` environment used during model conversion contains
+both TensorFlow and ONNX conversion packages. Those extra packages are not
+required to run the released `.onnx` models.
+
+The runtime choices are summarized below:
 
 | Runtime | Model format | Installation |
 |---|---|---|
-| TensorFlow | `.h5` | `pip install -r requirements.txt` |
-| ONNX Runtime | `.onnx` | `pip install -r requirements-onnx.txt` |
+| TensorFlow CPU-compatible | `.h5` | `python -m pip install -r requirements.txt` |
+| TensorFlow GPU (Windows, CUDA 11.2/cuDNN 8.1) | `.h5` | Install the same requirements after the CUDA/cuDNN step |
+| ONNX Runtime CPU | `.onnx` | `python -m pip install -r requirements-onnx.txt` |
 
-The TensorFlow environment reproduces the original H5-based workflow. 
-The ONNX environment supports inference without requiring TensorFlow, and it can be deployed on other major platforms such as PyTorch.
+The TensorFlow environments reproduce the original H5-based workflow. The ONNX
+environment supports inference without requiring TensorFlow and is portable to
+other platforms that support ONNX Runtime.
 
 ## Pretrained models and example data
 
@@ -160,9 +244,7 @@ python DeepCPR/q2_nested_cv.py --input example/PlasmaTable.csv --output-dir exam
 ```
 
 The OPLS-DA and VIP4t calculations are implemented in
-[`DeepCPR/oplsda_core.py`](DeepCPR/oplsda_core.py). Expected numerical outputs
-and Figure 4a files are provided in [`example/results`](example/results).
-With the parameters above, the mean accuracy is 98.54 percent, the mean
+[`DeepCPR/oplsda_core.py`](DeepCPR/oplsda_core.py). With the parameters above, the mean accuracy is 98.54 percent, the mean
 sensitivity is 97.37 percent, and the mean specificity is 99.97 percent.
 
 This analysis evaluates OPLS-DA performance conditional on the supplied fixed
@@ -203,11 +285,11 @@ The direct segment-level API is `DeepCPRAdaptive`. The existing
 
 ### TensorFlow-independent deployment with ONNX
 
-The ONNX models provide a framework-independent inference route. Install the
-ONNX dependencies with:
+The ONNX models provide a framework-independent CPU inference route. Activate
+the ONNX environment created above before running the workflow:
 
 ```bash
-pip install -r requirements-onnx.txt
+conda activate DeepCPR_onnx
 ```
 
 Both model exports are required for the complete workflow:
