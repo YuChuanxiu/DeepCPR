@@ -13,11 +13,18 @@ import glob
 import time
 import shutil
 import traceback
+import warnings
 from datetime import datetime
 import matplotlib
 matplotlib.use("Agg")  # headless backend: no figure windows pop up at runtime
 import gradio as gr
 import pandas as pd
+
+warnings.filterwarnings(
+	"ignore",
+	message=r"The parameters have been moved from the Blocks constructor.*",
+	category=UserWarning,
+)
 
 # Support both direct execution and package-module execution.
 if __package__ in (None, ""):
@@ -63,6 +70,13 @@ def _collect_figures(save_dir, image_formats):
             recursive=True,
         ))
     return sorted(figures)
+
+
+def _as_bool(value):
+	"""Normalize checkbox values across supported Gradio versions."""
+	if isinstance(value, bool):
+		return value
+	return str(value).strip().lower() in {"1", "true", "yes", "on"}
 	
 def resolve(files, deepcs_path, deepcpr_path, adaptive,
 			max_iter, max_comp, gen_image, image_formats,
@@ -84,6 +98,7 @@ def resolve(files, deepcs_path, deepcpr_path, adaptive,
 		raise gr.Error(
 			"No CDF files found in the upload "
 			"(supported extensions: .cdf / .nc / .netcdf)")
+	gen_image = _as_bool(gen_image)
 	image_formats = [str(value).strip().lower() for value in image_formats]
 	if gen_image and not image_formats:
 		raise gr.Error("Select at least one figure format: PNG and/or SVG.")
@@ -98,6 +113,12 @@ def resolve(files, deepcs_path, deepcpr_path, adaptive,
 	os.makedirs(tmp_in, exist_ok=True)
 	figures, per_file_time = [], []
 	n = len(cdfs)
+	print(
+		f"[DeepCPR] Starting {n} file(s); "
+		f"figures={'enabled' if gen_image else 'disabled'}; "
+		f"formats={','.join(image_formats)}",
+		flush=True,
+	)
 	try:
 		# process the files one by one so the progress bar can update
 		for i, src in enumerate(cdfs):
@@ -106,13 +127,14 @@ def resolve(files, deepcs_path, deepcpr_path, adaptive,
 						"(each file takes several minutes; detailed progress "
 						"is printed to the terminal)")
 			t_file = time.perf_counter()
+			print(f"[DeepCPR] [{i + 1}/{n}] Resolving {fname}", flush=True)
 			# keep only the current file in the temporary input folder
 			for old in os.listdir(tmp_in):
 				os.remove(os.path.join(tmp_in, old))
 			shutil.copy2(src, os.path.join(tmp_in, fname))
 			data_resolution(
 				tmp_in, deepcs_path, deepcpr_path, save_dir,
-				True if gen_image else None,
+				gen_image,
 				adaptive=adaptive,
 				adaptive_kwargs=({"max_iterations": int(max_iter),
 									"max_components": int(max_comp)}
@@ -121,6 +143,11 @@ def resolve(files, deepcs_path, deepcpr_path, adaptive,
 			)
 			if gen_image:
 				figures = _collect_figures(save_dir, image_formats)
+				print(
+					f"[DeepCPR] Generated {len(figures)} figure file(s) "
+					f"after {fname}",
+					flush=True,
+				)
 			per_file_time.append(f"{fname}: {time.perf_counter()-t_file:.3f} s")
 			gc.collect()
 		progress(0.97, desc="Collecting results...")
@@ -152,7 +179,20 @@ def resolve(files, deepcs_path, deepcpr_path, adaptive,
 			f"`ms/**/*.msp` mass spectra (NIST compatible){figure_note}\n\n"
 			"⏱ Time per file: " + "; ".join(per_file_time)
 		)
-		gallery = [(p, os.path.relpath(p, save_dir)) for p in figures]
+		# Gradio Gallery 4/6 can preview raster images but does not render SVG
+		# paths. SVG files remain available in the results folder and ZIP.
+		preview_figures = [
+			path for path in figures if path.lower().endswith(".png")
+		]
+		gallery = [
+			(path, os.path.relpath(path, save_dir))
+			for path in preview_figures
+		]
+		print(
+			f"[DeepCPR] Finished in {time.perf_counter() - t0:.3f} s; "
+			f"gallery previews={len(gallery)}",
+			flush=True,
+		)
 		return status, peak_df, seg_df, gallery, zip_path
 	except Exception as e:
 		traceback.print_exc()
@@ -247,8 +287,8 @@ with gr.Blocks(title="DeepCPR",
 						seg_out = gr.Dataframe(label="Segment info",
 												interactive=False, max_height=260)
 					gallery_out = gr.Gallery(
-						label="Resolution figures (shown when figure generation "
-								"is enabled)", columns=3, height="auto")
+						label="Resolution figures (PNG preview; SVG remains in "
+								"the results ZIP)", columns=3, height="auto")
 					zip_out = gr.File(label="Download all results (.zip)")
 			run_btn.click(
 				resolve,
