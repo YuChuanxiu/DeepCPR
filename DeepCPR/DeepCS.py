@@ -1,7 +1,27 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import tensorflow as tf
+from .model_runtime import load_model_auto
+
+
+_MODEL_CACHE = {}
+DEFAULT_DEEPCS_BATCH_SIZE = 512
+
+
+def _load_cached_model(model_path):
+    """Reuse one immutable DeepCS model across files in a batch."""
+    import os
+    path = os.path.abspath(os.fspath(model_path))
+    try:
+        signature = (path, os.path.getmtime(path), os.path.getsize(path))
+    except OSError:
+        signature = (path, None, None)
+    model = _MODEL_CACHE.get(signature)
+    if model is None:
+        model = load_model_auto(path)
+        _MODEL_CACHE.clear()
+        _MODEL_CACHE[signature] = model
+    return model
 
 
 def process_Chromseg(chrom, RT, model_size):
@@ -192,9 +212,13 @@ def Chromseg(model_path, data_file, model_size, distance, threshold):
     X = data_file['d']
     RT = data_file['rt']
     segs, segs_unfold, tics, RTs = process_Chromseg(X, RT, model_size)
-    restored_model = tf.keras.models.load_model(model_path)
+    restored_model = _load_cached_model(model_path)
 
-    y_DeepSegPred = restored_model.predict(segs_unfold)
+    y_DeepSegPred = restored_model.predict(
+        segs_unfold,
+        batch_size=DEFAULT_DEEPCS_BATCH_SIZE,
+        verbose=0,
+    )
 
     y_fold = np.zeros((segs.shape[0], segs.shape[1], segs.shape[2]))
     y_DeepSeg = np.zeros(X.shape)
