@@ -228,7 +228,7 @@ def peak_preprocess(CC, enable_gaussian_tail_correction=True):
 
         if len(peak_st) > 0:
             for ps in range(len(peak_st)):
-                if peak_ed[ps]-peak_st[ps]+2 < 5:
+                if peak_ed[ps]-peak_st[ps]+1 < 5:
                     C[peak_st[ps]:peak_ed[ps]+1, r] = 0
         if max(C[:, r]) < 0.04:
             C[:, r] = 0
