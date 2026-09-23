@@ -1653,6 +1653,81 @@ def _paired_comparison(candidate_errors, reference_errors, config, seed_offset=0
     }
 
 
+def _decisive_multicomponent_candidate(evaluated, config):
+    """Return a stable 3+ component model decisively favoured by validation.
+
+    Independent peak-shape fitting can be conservative for strongly
+    coeluting compounds because the additional chromatographic apex may be a
+    shoulder rather than a separately fitted maximum.  That failure should
+    not force a smaller model when the complete model is reproducible and its
+    masked-validation error is significantly lower than every simpler model.
+
+    The rule is intentionally unavailable to one-versus-two component
+    decisions, where an extra profile can readily absorb baseline or peak
+    asymmetry.  No fixed R2 or error-difference cutoff is used.  Evidence is
+    assessed from the paired bootstrap confidence interval for the validation
+    errors, together with residual randomisation, perturbation stability and
+    complete resolved profiles.  A separately resolved residual apex is not
+    mandatory because that is precisely the evidence that can disappear for
+    strongly coeluting, spectrally similar compounds.
+    """
+    candidates = []
+    for item in evaluated:
+        if int(item["component_count"]) < 3:
+            continue
+        stability = item.get("stability") or {}
+        resolved_shape = item.get("resolved_profile_shape_test") or {}
+        residual_null = item.get("residual_null_test") or {}
+        if not (
+                stability.get("all_components_stable")
+                and resolved_shape.get("supported")
+                and residual_null.get("supported")):
+            continue
+
+        simpler = [
+            other for other in evaluated
+            if int(other["component_count"]) < int(item["component_count"])
+        ]
+        if not simpler:
+            continue
+
+        comparisons = []
+        decisive = True
+        for reference in simpler:
+            comparison = _paired_comparison(
+                item["cv_fold_errors"], reference["cv_fold_errors"], config,
+                seed_offset=(
+                    60000
+                    + int(item["candidate_number"]) * 100
+                    + int(reference["candidate_number"])
+                ),
+            )
+            comparison.update({
+                "candidate_indices": list(item["indices"]),
+                "reference_indices": list(reference["indices"]),
+            })
+            comparisons.append(comparison)
+            # Error is candidate minus reference.  An upper confidence bound
+            # below zero shows that the complex candidate is consistently
+            # better across the held-out masks.
+            if comparison["confidence_interval"][1] >= 0.0:
+                decisive = False
+
+        if decisive:
+            candidates.append((item, comparisons))
+
+    if not candidates:
+        return None, []
+    return min(
+        candidates,
+        key=lambda pair: (
+            -int(pair[0]["component_count"]),
+            float(pair[0]["cv_normalised_sse_mean"]),
+            tuple(pair[0]["indices"]),
+        ),
+    )
+
+
 def _residual_peak_corroborated(item, simpler, config):
     """Require independent evidence before the residual path restores a model.
 
@@ -2271,8 +2346,16 @@ def select_component_model(observed, anchors, events, config=None,
         # exceeds the residual null distribution. This overrides parsimony
         # for reproducibly informative extra profiles, while leaving the
         # legacy tie behaviour unchanged for ordinary candidates.
+        decisive_candidate, decisive_validation = (
+            _decisive_multicomponent_candidate(evaluated, config)
+        )
         shape_supported = _corroborated_shape_candidates(evaluated, config)
-        if shape_supported:
+        if decisive_candidate is not None:
+            selected = decisive_candidate
+            selection_reason = (
+                "decisive_masked_validation_supports_stable_multicomponent_model"
+            )
+        elif shape_supported:
             selected = min(
                 shape_supported,
                 key=lambda item: (
@@ -2307,8 +2390,16 @@ def select_component_model(observed, anchors, events, config=None,
             )
     else:
         decision_pool = list(evaluated)
+        decisive_candidate, decisive_validation = (
+            _decisive_multicomponent_candidate(evaluated, config)
+        )
         shape_supported = _corroborated_shape_candidates(evaluated, config)
-        if shape_supported:
+        if decisive_candidate is not None:
+            selected = decisive_candidate
+            selection_reason = (
+                "decisive_masked_validation_supports_stable_multicomponent_model"
+            )
+        elif shape_supported:
             selected = min(
                 shape_supported,
                 key=lambda item: (
@@ -2527,6 +2618,7 @@ def select_component_model(observed, anchors, events, config=None,
         "competitive_indices": [list(item["indices"]) for item in competitive_pool],
         "stable_indices": [list(item["indices"]) for item in stable_pool],
         "stable_comparisons_to_best_stable": stable_comparisons,
+        "decisive_multicomponent_validation": decisive_validation,
         "frr_confirmation": frr_confirmation,
         "selected_indices": list(selected_indices),
         "selected_component_count": len(selected_indices),
