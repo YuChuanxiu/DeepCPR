@@ -166,6 +166,10 @@ not to use the command line. All data processing and model inference are
 performed on the user's local machine; raw GC-MS data are not uploaded to an
 external server.
 
+<div align="center">
+<img src="https://github.com/YuChuanxiu/DeepCPR/blob/main/app_interface.png" width="785" alt="DeepCPR web interface" />
+</div>
+
 From the repository root, launch the interface with:
 
 ```bash
