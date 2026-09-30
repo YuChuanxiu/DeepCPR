@@ -139,7 +139,7 @@ other platforms that support ONNX Runtime.
 ## Pretrained models and example data
 
 Download the pretrained models and example datasets from
-[Release v1.1.0](https://github.com/YuChuanxiu/DeepCPR/releases/tag/v1.1.0):
+[Release v1.2.0](https://github.com/YuChuanxiu/DeepCPR/releases/tag/v1.2.0):
 
 - `DeepCPR.h5` and `DeepCS.h5` for the TensorFlow/H5 workflow;
 - `DeepCPR.onnx` and `DeepCS.onnx` for TensorFlow-independent inference;
