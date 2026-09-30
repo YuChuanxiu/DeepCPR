@@ -1,4 +1,4 @@
-from DeepCPR.DeepCPR import data_resolution
+from DeepCPR.DeepCPR import data_resolution, DeepCPRAdaptive
 
 # The input data path can be customized as a folder containing files in the 'CDF' format.
 dataset_path = "example/data"
